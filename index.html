@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>컨센서스 노트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#fff; --text:#16181d; --muted:#6b7280; --line:#e6e8ec;
+  --accent:#4f5bd5; --accent-soft:#eef0fd;
+  --cb:#b45309; --cb-soft:#fef3c7; --buy:#4f5bd5; --buy-soft:#eef0fd;
+  --hold:#6b7280; --hold-soft:#f1f2f4; --nr:#0e7490; --nr-soft:#e0f4f8;
+  --up:#d63b3b; --down:#2563eb; --star:#16a34a;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115; --surface:#171a20; --text:#eceef2; --muted:#9aa1ad; --line:#262a33;
+  --accent:#8b94f5; --accent-soft:#232744;
+  --cb:#fbbf24; --cb-soft:#3a2e10; --buy:#8b94f5; --buy-soft:#232744;
+  --hold:#a1a7b3; --hold-soft:#242830; --nr:#5fc6dc; --nr-soft:#12303a;
+  --up:#f87171; --down:#60a5fa; --star:#4ade80; --shadow:none;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+h1{margin:0;font-size:26px;letter-spacing:-.02em}
+.sub{margin:6px 0 0;color:var(--muted);font-size:14px}
+.stats{display:flex;gap:20px;color:var(--muted);font-size:13px}
+.stats b{display:block;color:var(--text);font-size:20px;font-variant-numeric:tabular-nums}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:8px}
+.bar input,.bar select{font:inherit;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+.bar input:focus,.bar select:focus{border-color:var(--accent)}
+#q{flex:1 1 220px;min-width:0}
+.toggle{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px;cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--star);margin:0}
+.day{margin-top:28px}
+.day-head{display:flex;align-items:baseline;gap:10px;margin:0 0 12px}
+.day-head h2{margin:0;font-size:17px;letter-spacing:-.01em}
+.day-head span{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+a.card{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;box-shadow:var(--shadow);transition:transform .12s ease,border-color .12s ease}
+a.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.code{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.name{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.3;word-break:keep-all}
+.meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin-top:auto}
+.up{font-weight:700;font-variant-numeric:tabular-nums}
+.up.pos{color:var(--up)} .up.neg{color:var(--down)}
+.chip{font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;white-space:nowrap}
+.chip.C{color:var(--cb);background:var(--cb-soft)}
+.chip.B{color:var(--buy);background:var(--buy-soft)}
+.chip.H,.chip.S{color:var(--hold);background:var(--hold-soft)}
+.chip.N,.chip.J{color:var(--nr);background:var(--nr-soft)}
+.study{color:var(--star);font-size:12px;font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:60px 0}
+footer{margin-top:48px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>컨센서스 노트</h1>
+      <p class="sub">카드를 누르면 노션 페이지가 열려요.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="bar">
+    <input id="q" type="search" placeholder="기업명 · 증권사 검색" aria-label="검색">
+    <select id="op" aria-label="투자의견">
+      <option value="">모든 투자의견</option>
+      <option value="C">CONVICTION BUY</option>
+      <option value="B">BUY</option>
+      <option value="H">HOLD</option>
+      <option value="N">NR</option>
+      <option value="J">수주 코멘트</option>
+    </select>
+    <select id="broker" aria-label="증권사"><option value="">모든 증권사</option></select>
+    <label class="toggle"><input type="checkbox" id="study">공부하자만</label>
+  </div>
+
+  <main id="list"></main>
+  <footer id="foot"></footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  const OP = {C:"CONVICTION BUY",B:"BUY",H:"HOLD",S:"SELL",N:"NR",J:"수주 코멘트"};
+  const DAYS = ["일","월","화","수","목","금","토"];
+  const data = (window.CONSENSUS && window.CONSENSUS.rows) || [];
+
+  // 예전 기록은 "기업명(증권사)" 형식이라 분리해서 보여줌
+  const rows = data.map(([id,d,c,b,o,u,s]) => {
+    let name = c || "(제목 없음)", broker = b || "";
+    if (!broker) {
+      const m = name.match(/^(.+?)\s*\((.+)\)$/);
+      if (m) { name = m[1]; broker = m[2]; }
+    }
+    return {id, d: d || "", name: name.replace(/\s+/g," ").trim(), broker, ops: o ? o.split("|") : [], u, s};
+  });
+
+  // 증권사 목록
+  const brokers = [...new Set(rows.map(r => r.broker).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
+  const bSel = document.getElementById("broker");
+  brokers.forEach(b => { const o = document.createElement("option"); o.value = b; o.textContent = b; bSel.appendChild(o); });
+
+  function dateLabel(d){
+    if (!/^\d{6}$/.test(d)) return "날짜 미지정";
+    const y = 2000 + +d.slice(0,2), m = +d.slice(2,4), day = +d.slice(4,6);
+    const w = DAYS[new Date(y, m-1, day).getDay()];
+    return `${m}월 ${day}일 (${w})`;
+  }
+
+  function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function card(r){
+    const a = el("a","card");
+    a.href = "https://www.notion.so/" + r.id;
+    a.target = "_blank"; a.rel = "noopener";
+    const top = el("div","top");
+    top.appendChild(el("span","code", r.d || "—"));
+    if (r.ops.length) r.ops.forEach(o => top.appendChild(el("span","chip "+o, OP[o]||o)));
+    a.appendChild(top);
+    a.appendChild(el("div","name", r.name));
+    const meta = el("div","meta");
+    const left = el("span", null, r.broker || "");
+    if (r.s === 1) { const st = el("span","study"," · 공부하자"); left.appendChild(st); }
+    meta.appendChild(left);
+    if (typeof r.u === "number") {
+      meta.appendChild(el("span","up "+(r.u>=0?"pos":"neg"), (r.u>0?"+":"")+r.u+"%"));
+    }
+    a.appendChild(meta);
+    a.title = `${r.d} ${r.name}${r.broker?" · "+r.broker:""} — 노션에서 열기`;
+    return a;
+  }
+
+  const $q = document.getElementById("q"), $op = document.getElementById("op"), $st = document.getElementById("study"), $list = document.getElementById("list");
+
+  function render(){
+    const q = $q.value.trim().toLowerCase(), op = $op.value, br = bSel.value, st = $st.checked;
+    const f = rows.filter(r =>
+      (!q || r.name.toLowerCase().includes(q) || r.broker.toLowerCase().includes(q) || r.d.includes(q)) &&
+      (!op || r.ops.includes(op)) && (!br || r.broker === br) && (!st || r.s === 1));
+    const groups = new Map();
+    f.forEach(r => { if (!groups.has(r.d)) groups.set(r.d, []); groups.get(r.d).push(r); });
+    const keys = [...groups.keys()].sort((a,b) => (b||"0").localeCompare(a||"0"));
+    $list.replaceChildren();
+    if (!keys.length) { $list.appendChild(el("div","empty","조건에 맞는 기록이 없어요.")); return; }
+    keys.forEach(k => {
+      const sec = el("section","day");
+      const h = el("div","day-head");
+      h.appendChild(el("h2", null, dateLabel(k)));
+      h.appendChild(el("span", null, `${k ? k+" · " : ""}${groups.get(k).length}건`));
+      sec.appendChild(h);
+      const g = el("div","grid");
+      groups.get(k).forEach(r => g.appendChild(card(r)));
+      sec.appendChild(g);
+      $list.appendChild(sec);
+    });
+  }
+
+  // 상단 요약
+  const stats = document.getElementById("stats");
+  [["전체 기록", rows.length], ["기록한 날", new Set(rows.map(r=>r.d).filter(Boolean)).size], ["공부하자", rows.filter(r=>r.s===1).length]]
+    .forEach(([l,v]) => { const d = el("div"); d.appendChild(el("b", null, v)); d.appendChild(document.createTextNode(l)); stats.appendChild(d); });
+  document.getElementById("foot").textContent = "마지막 동기화: " + ((window.CONSENSUS && window.CONSENSUS.updated) || "—");
+
+  [$q,$op,bSel,$st].forEach(e => e.addEventListener("input", render));
+  render();
+})();
+</script>
+</body>
+</html>
