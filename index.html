@@ -80,6 +80,39 @@ details.tbl summary{cursor:pointer;width:max-content}
 details.tbl table{border-collapse:collapse;margin-top:8px;font-variant-numeric:tabular-nums}
 details.tbl td,details.tbl th{padding:4px 14px 4px 0;text-align:left;font-weight:400;border-bottom:1px solid var(--line)}
 details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
+.picks{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.picks-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.picks-head h2{margin:0;font-size:15px}
+.wknav{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.wknav button{font:inherit;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer}
+.wknav button:disabled{opacity:.35;cursor:default}
+a.hero,div.hero{display:block;text-decoration:none;color:inherit;border-radius:12px;padding:18px;background:linear-gradient(135deg,var(--cb-soft),var(--accent-soft));border:1px solid var(--line)}
+a.hero:hover{border-color:var(--cb)}
+.hero .label{font-size:12px;font-weight:700;color:var(--cb);letter-spacing:.02em}
+.hero .hname{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:6px 0 4px;word-break:keep-all}
+.hero .hmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.hero .why{margin:12px 0 0;font-size:14px;line-height:1.55;color:var(--text)}
+.hero.empty .hname{font-size:17px;font-weight:700}
+.slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}
+.slot{display:flex;flex-direction:column;gap:4px;min-height:84px;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface)}
+a.slot:hover{border-color:var(--accent)}
+.slot .sd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.slot .sn{font-size:14px;font-weight:700;line-height:1.3;word-break:keep-all}
+.slot .ss{font-size:12px;color:var(--muted);margin-top:auto}
+.slot.picked{border-color:var(--cb);background:var(--cb-soft)}
+.slot.weekly{border-width:2px}
+.slot.open{border-style:dashed}
+.slot.none{opacity:.5}
+.slot .cand{font-size:11px;font-weight:700;color:var(--accent)}
+.archive{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.archive h3{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600}
+.archive a{display:flex;gap:10px;align-items:baseline;padding:6px 0;text-decoration:none;color:var(--text);font-size:14px;border-bottom:1px dashed var(--line)}
+.archive a:hover .an{color:var(--accent)}
+.archive .aw{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;min-width:64px}
+.archive .an{font-weight:700}
+.archive .ar{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.badge{font-size:12px}
+@media (max-width:640px){.slots{grid-template-columns:repeat(2,minmax(0,1fr))}.hero .hname{font-size:20px}}
 </style>
 </head>
 <body>
@@ -91,6 +124,20 @@ details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
     </div>
     <div class="stats" id="stats"></div>
   </header>
+
+  <section class="picks" aria-labelledby="pk-title">
+    <div class="picks-head">
+      <h2 id="pk-title">🏆 금주의 보고서</h2>
+      <div class="wknav">
+        <button id="pk-prev" aria-label="이전 주">‹</button>
+        <span id="pk-range"></span>
+        <button id="pk-next" aria-label="다음 주">›</button>
+      </div>
+    </div>
+    <div id="pk-hero"></div>
+    <div class="slots" id="pk-slots"></div>
+    <div class="archive" id="pk-archive" hidden></div>
+  </section>
 
   <section class="panel" aria-labelledby="wk-title">
     <div class="panel-head">
@@ -130,13 +177,13 @@ details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
   const data = (window.CONSENSUS && window.CONSENSUS.rows) || [];
 
   // 예전 기록은 "기업명(증권사)" 형식이라 분리해서 보여줌
-  const rows = data.map(([id,d,c,b,o,u,s]) => {
+  const rows = data.map(([id,d,c,b,o,u,s,p,why]) => {
     let name = c || "(제목 없음)", broker = b || "";
     if (!broker) {
       const m = name.match(/^(.+?)\s*\((.+)\)$/);
       if (m) { name = m[1]; broker = m[2]; }
     }
-    return {id, d: d || "", name: name.replace(/\s+/g," ").trim(), broker, ops: o ? o.split("|") : [], u, s};
+    return {id, d: d || "", name: name.replace(/\s+/g," ").trim(), broker, ops: o ? o.split("|") : [], u, s, pick: p || 0, why: why || ""};
   });
 
   // 증권사 목록
@@ -158,7 +205,9 @@ details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
     a.href = "https://www.notion.so/" + r.id;
     a.target = "_blank"; a.rel = "noopener";
     const top = el("div","top");
-    top.appendChild(el("span","code", r.d || "—"));
+    const code = el("span","code", r.d || "—");
+    if (r.pick) { const bd = el("span","badge", r.pick === 2 ? " 🏆" : " 🏅"); bd.title = r.pick === 2 ? "금주의 보고서" : "오늘의 보고서"; code.appendChild(bd); }
+    top.appendChild(code);
     if (r.ops.length) r.ops.forEach(o => top.appendChild(el("span","chip "+o, OP[o]||o)));
     a.appendChild(top);
     a.appendChild(el("div","name", r.name));
@@ -305,6 +354,108 @@ details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
     hit.addEventListener("pointerleave", hide);
   }
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => renderWeekly(lastFiltered), 150); });
+
+  // ── 금주의 보고서 / 오늘의 보고서 ──
+  const notion = id => "https://www.notion.so/" + id;
+  const ymd = dt => String(dt.getFullYear() % 100).padStart(2,"0") + String(dt.getMonth()+1).padStart(2,"0") + String(dt.getDate()).padStart(2,"0");
+  const addDays = (dt, n) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + n);
+  const thisWeek = monday(new Date());
+  const firstWeek = weeks.length ? weeks[0] : thisWeek;
+  let pkWeek = thisWeek;
+
+  // 선정이 없는 날의 추천 후보: 여러 증권사가 다룬 기업 > CONVICTION BUY > UPSIDE
+  function candidate(list){
+    const cover = {};
+    list.forEach(r => { cover[r.name] = (cover[r.name] || 0) + 1; });
+    const scored = list.filter(r => r.ops.length || typeof r.u === "number")
+      .map(r => ({r, sc: cover[r.name] * 1000 + (r.ops.includes("C") ? 500 : 0) + (r.u || 0)}))
+      .sort((a, b) => b.sc - a.sc);
+    return scored.length ? {r: scored[0].r, n: cover[scored[0].r.name]} : null;
+  }
+
+  function renderPicks(){
+    const mon = pkWeek, sun = addDays(mon, 6);
+    document.getElementById("pk-range").textContent = `${md(mon)} ~ ${md(sun)}`;
+    document.getElementById("pk-prev").disabled = mon <= firstWeek;
+    document.getElementById("pk-next").disabled = mon >= thisWeek;
+
+    const keys = new Set([0,1,2,3,4,5,6].map(i => ymd(addDays(mon, i))));
+    const inWeek = rows.filter(r => keys.has(r.d));
+    const weekly = inWeek.find(r => r.pick === 2);
+    const dailies = inWeek.filter(r => r.pick >= 1);
+
+    // 히어로
+    const hero = document.getElementById("pk-hero"); hero.replaceChildren();
+    if (weekly) {
+      const a = el("a","hero"); a.href = notion(weekly.id); a.target = "_blank"; a.rel = "noopener";
+      a.appendChild(el("div","label", `금주의 보고서 · ${dateLabel(weekly.d)}`));
+      a.appendChild(el("div","hname", weekly.name));
+      const hm = el("div","hmeta");
+      if (weekly.broker) hm.appendChild(el("span", null, weekly.broker));
+      weekly.ops.forEach(o => hm.appendChild(el("span","chip "+o, OP[o]||o)));
+      if (typeof weekly.u === "number") hm.appendChild(el("span","up "+(weekly.u>=0?"pos":"neg"), (weekly.u>0?"+":"")+weekly.u+"%"));
+      a.appendChild(hm);
+      if (weekly.why) a.appendChild(el("p","why", "“" + weekly.why + "”"));
+      hero.appendChild(a);
+    } else {
+      const d = el("div","hero empty");
+      d.appendChild(el("div","label", "금주의 보고서"));
+      d.appendChild(el("div","hname", dailies.length ? `아직 선정 전이에요 · 후보 ${dailies.length}개` : "아직 선정 전이에요"));
+      d.appendChild(el("div","hmeta", dailies.length
+        ? "노션에서 아래 오늘의 보고서 중 하나의 '선정'을 금주의로 바꿔 주세요."
+        : "노션에서 매일 하나씩 '선정'을 오늘의로 골라 주세요. 주말에 그중 하나를 금주의로 고르면 여기에 떠요."));
+      hero.appendChild(d);
+    }
+
+    // 월~금 슬롯
+    const slots = document.getElementById("pk-slots"); slots.replaceChildren();
+    for (let i = 0; i < 5; i++) {
+      const day = addDays(mon, i), key = ymd(day), list = rows.filter(r => r.d === key);
+      const picked = list.find(r => r.pick === 2) || list.find(r => r.pick === 1);
+      const head = `${DAYS[day.getDay()]} ${md(day)}`;
+      let s;
+      if (picked) {
+        s = el("a", "slot picked" + (picked.pick === 2 ? " weekly" : ""));
+        s.href = notion(picked.id); s.target = "_blank"; s.rel = "noopener";
+        s.appendChild(el("span","sd", head + (picked.pick === 2 ? " · 🏆" : " · 🏅")));
+        s.appendChild(el("span","sn", picked.name));
+        s.appendChild(el("span","ss", picked.broker || ""));
+      } else if (list.length) {
+        const c = candidate(list);
+        s = el(c ? "a" : "div", "slot open");
+        if (c) { s.href = notion(c.r.id); s.target = "_blank"; s.rel = "noopener"; }
+        s.appendChild(el("span","sd", `${head} · 미선정`));
+        if (c) {
+          s.appendChild(el("span","cand", "추천 후보"));
+          s.appendChild(el("span","sn", c.r.name));
+          s.appendChild(el("span","ss", c.n > 1 ? `${c.n}개 증권사 · ${list.length}건 중` : `${c.r.broker || ""} · ${list.length}건 중`));
+        } else s.appendChild(el("span","ss", `${list.length}건`));
+      } else {
+        s = el("div","slot none");
+        s.appendChild(el("span","sd", head));
+        s.appendChild(el("span","ss", "기록 없음"));
+      }
+      slots.appendChild(s);
+    }
+
+    // 지난 금주의 보고서
+    const arc = document.getElementById("pk-archive"); arc.replaceChildren();
+    const past = rows.filter(r => r.pick === 2 && /^\d{6}$/.test(r.d)).sort((a, b) => b.d.localeCompare(a.d));
+    arc.hidden = !past.length;
+    if (past.length) {
+      arc.appendChild(el("h3", null, "명예의 전당"));
+      past.forEach(r => {
+        const a = el("a"); a.href = notion(r.id); a.target = "_blank"; a.rel = "noopener";
+        a.appendChild(el("span","aw", md(monday(toDate(r.d))) + " 주"));
+        a.appendChild(el("span","an", r.name));
+        a.appendChild(el("span","ar", [r.broker, r.why].filter(Boolean).join(" · ")));
+        arc.appendChild(a);
+      });
+    }
+  }
+  document.getElementById("pk-prev").addEventListener("click", () => { pkWeek = addDays(pkWeek, -7); renderPicks(); });
+  document.getElementById("pk-next").addEventListener("click", () => { pkWeek = addDays(pkWeek, 7); renderPicks(); });
+  renderPicks();
 
   // 상단 요약
   const stats = document.getElementById("stats");

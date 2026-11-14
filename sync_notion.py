@@ -48,6 +48,7 @@ def row(page):
     p = page["properties"]
     date = (p.get("날짜별 묶음") or {}).get("select")
     study = (p.get("추가 공부") or {}).get("select")
+    pick = ((p.get("선정") or {}).get("select") or {}).get("name")
     ops = [OP_CODES.get(o["name"], o["name"]) for o in (p.get("투자 의견") or {}).get("multi_select", [])]
     return [
         page["id"].replace("-", ""),
@@ -57,6 +58,8 @@ def row(page):
         "|".join(ops) or None,
         (p.get("UPSIDE") or {}).get("number"),
         None if not study else (1 if study["name"] == "공부하자" else 0),
+        {"오늘의": 1, "금주의": 2}.get(pick),  # 선정: 1=오늘의, 2=금주의
+        text(p.get("선정 이유")),
     ]
 
 
@@ -70,6 +73,7 @@ def main():
     today = datetime.date.today().isoformat()
     OUT.write_text(
         "// 노션 '컨센서스 프로젝트' 데이터 스냅샷. sync_notion.py가 자동 생성합니다.\n"
+        "// 행: [ID, 날짜, 기업명, 증권사, 투자의견, UPSIDE, 추가공부, 선정(1=오늘의 2=금주의), 선정 이유]\n"
         f'window.CONSENSUS = {{\nupdated: "{today}",\nrows: [\n{lines}\n]\n}};\n',
         encoding="utf-8",
     )
