@@ -3,9 +3,11 @@
 window.CONSENSUS = {
 updated: "2026-11-14",
 rows: [
-["4184d3d8697c80459035c924f79797b5", "261113", "HMM", "LS", "B", 45, null, null, null],
-["4184d3d8697c80969f65f5bf5f4da106", "261113", "대한조선", "LS", "B", 50, null, null, null],
-["4174d3d8697c80cea362f55a7954e0a1", "261113", "솔루스첨단소재", "유진", "C", 97, null, null, null],
+["4184d3d8697c8076a388c5b314abfa56", "261113", "NAVER", "LS", "B", 61, null, null, null],
+["4184d3d8697c80be8535d9ab084b3169", "261113", "롯데웰푸드", "LS", "B", 32, 0, null, null],
+["4184d3d8697c80459035c924f79797b5", "261113", "HMM", "LS", "B", 45, 0, null, null],
+["4184d3d8697c80969f65f5bf5f4da106", "261113", "대한조선", "LS", "B", 50, 1, null, null],
+["4174d3d8697c80cea362f55a7954e0a1", "261113", "솔루스첨단소재", "유진", "C", 97, 1, null, null],
 ["4164d3d8697c8022bbe9d4c5991e357a", "261112", "레이언스", "LS", "B", 22, null, null, null],
 ["4164d3d8697c80ac82e7f2ab65aa34d5", "261112", "코오롱인더", "IBK", "C", 89, null, null, null],
 ["4164d3d8697c80bbbf1ef16549f21e59", "261112", "삼성전기", "IBK", "C", 116, null, null, null],
