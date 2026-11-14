@@ -3,6 +3,7 @@
 window.CONSENSUS = {
 updated: "2026-11-14",
 rows: [
+["4184d3d8697c80459035c924f79797b5", "261113", "HMM", "LS", "B", 45, null, null, null],
 ["4184d3d8697c80969f65f5bf5f4da106", "261113", "대한조선", "LS", "B", 50, null, null, null],
 ["4174d3d8697c80cea362f55a7954e0a1", "261113", "솔루스첨단소재", "유진", "C", 97, null, null, null],
 ["4164d3d8697c8022bbe9d4c5991e357a", "261112", "레이언스", "LS", "B", 22, null, null, null],
