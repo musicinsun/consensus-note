@@ -57,6 +57,29 @@ a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .study{color:var(--star);font-size:12px;font-weight:600}
 .empty{color:var(--muted);text-align:center;padding:60px 0}
 footer{margin-top:48px;color:var(--muted);font-size:12px;text-align:center}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 12px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.panel-head h2{margin:0;font-size:15px}
+.panel-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.kpi{text-align:right;font-size:13px;color:var(--muted)}
+.kpi b{display:block;font-size:22px;color:var(--text);font-variant-numeric:tabular-nums}
+.delta.pos{color:var(--up)} .delta.neg{color:var(--down)}
+.chart{position:relative;margin-top:8px}
+.chart svg{display:block;width:100%;height:220px;overflow:visible}
+.chart .grid line{stroke:var(--line)}
+.chart .axis text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .area{fill:var(--accent);opacity:.08}
+.chart .dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.chart .cross{stroke:var(--muted);stroke-dasharray:3 3}
+.chart .vlabel{fill:var(--text);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.tip{position:absolute;pointer-events:none;background:var(--text);color:var(--surface);font-size:12px;line-height:1.45;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,calc(-100% - 10px))}
+.tip b{font-size:13px}
+details.tbl{margin-top:6px;font-size:13px;color:var(--muted)}
+details.tbl summary{cursor:pointer;width:max-content}
+details.tbl table{border-collapse:collapse;margin-top:8px;font-variant-numeric:tabular-nums}
+details.tbl td,details.tbl th{padding:4px 14px 4px 0;text-align:left;font-weight:400;border-bottom:1px solid var(--line)}
+details.tbl th{color:var(--muted)} details.tbl td{color:var(--text)}
 </style>
 </head>
 <body>
@@ -68,6 +91,18 @@ footer{margin-top:48px;color:var(--muted);font-size:12px;text-align:center}
     </div>
     <div class="stats" id="stats"></div>
   </header>
+
+  <section class="panel" aria-labelledby="wk-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="wk-title">주간 읽은 리포트 수</h2>
+        <p id="wk-sub">월요일 시작 기준 · 아래 검색·필터가 함께 적용돼요</p>
+      </div>
+      <div class="kpi" id="wk-kpi"></div>
+    </div>
+    <div class="chart" id="wk-chart"></div>
+    <details class="tbl"><summary>표로 보기</summary><div id="wk-table"></div></details>
+  </section>
 
   <div class="bar">
     <input id="q" type="search" placeholder="기업명 · 증권사 검색" aria-label="검색">
@@ -146,6 +181,8 @@ footer{margin-top:48px;color:var(--muted);font-size:12px;text-align:center}
     const f = rows.filter(r =>
       (!q || r.name.toLowerCase().includes(q) || r.broker.toLowerCase().includes(q) || r.d.includes(q)) &&
       (!op || r.ops.includes(op)) && (!br || r.broker === br) && (!st || r.s === 1));
+    lastFiltered = f;
+    renderWeekly(f);
     const groups = new Map();
     f.forEach(r => { if (!groups.has(r.d)) groups.set(r.d, []); groups.get(r.d).push(r); });
     const keys = [...groups.keys()].sort((a,b) => (b||"0").localeCompare(a||"0"));
@@ -163,6 +200,111 @@ footer{margin-top:48px;color:var(--muted);font-size:12px;text-align:center}
       $list.appendChild(sec);
     });
   }
+
+  // ── 주간 그래프 ──
+  const SVGNS = "http://www.w3.org/2000/svg";
+  let lastFiltered = rows;
+  function svg(tag, attrs){ const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+  function toDate(d){ return new Date(2000 + +d.slice(0,2), +d.slice(2,4) - 1, +d.slice(4,6)); }
+  function monday(dt){ const x = new Date(dt); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+  function md(dt){ return `${dt.getMonth()+1}/${dt.getDate()}`; }
+
+  // 전체 데이터 기준으로 주 범위를 고정 (필터해도 x축이 흔들리지 않게)
+  const allDates = rows.map(r => r.d).filter(d => /^\d{6}$/.test(d)).sort();
+  const weeks = [];
+  if (allDates.length) {
+    const end = monday(toDate(allDates[allDates.length-1]));
+    for (let w = monday(toDate(allDates[0])); w <= end; w = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7)) weeks.push(w);
+  }
+  const wkKey = dt => dt.getFullYear()*10000 + (dt.getMonth()+1)*100 + dt.getDate();
+
+  function renderWeekly(f){
+    const counts = new Map(weeks.map(w => [wkKey(w), 0]));
+    f.forEach(r => { if (/^\d{6}$/.test(r.d)) { const k = wkKey(monday(toDate(r.d))); counts.set(k, (counts.get(k) || 0) + 1); } });
+    const pts = weeks.map(w => { const e = new Date(w); e.setDate(e.getDate() + 6); return {w, e, n: counts.get(wkKey(w)) || 0}; });
+
+    // KPI: 이번 주 vs 지난주
+    const kpi = document.getElementById("wk-kpi"); kpi.replaceChildren();
+    if (pts.length) {
+      const cur = pts[pts.length-1], prev = pts[pts.length-2];
+      kpi.appendChild(el("b", null, cur.n + "건"));
+      kpi.appendChild(document.createTextNode(`이번 주 (${md(cur.w)}~) `));
+      if (prev) {
+        const diff = cur.n - prev.n;
+        kpi.appendChild(el("span", "delta " + (diff > 0 ? "pos" : diff < 0 ? "neg" : ""), `지난주 대비 ${diff > 0 ? "+" : ""}${diff}`));
+      }
+    }
+
+    // 표
+    const tw = document.getElementById("wk-table"); tw.replaceChildren();
+    const t = el("table"), hr = el("tr");
+    hr.appendChild(el("th", null, "주")); hr.appendChild(el("th", null, "건수")); t.appendChild(hr);
+    pts.slice().reverse().forEach(p => { const tr = el("tr"); tr.appendChild(el("td", null, `${md(p.w)} ~ ${md(p.e)}`)); tr.appendChild(el("td", null, p.n)); t.appendChild(tr); });
+    tw.appendChild(t);
+
+    // 그래프
+    const box = document.getElementById("wk-chart"); box.replaceChildren();
+    if (!pts.length) return;
+    const W = Math.max(box.clientWidth, 280), H = 220, m = {t: 18, r: 14, b: 26, l: 30};
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const maxN = Math.max(...pts.map(p => p.n), 1);
+    const step = maxN <= 5 ? 1 : maxN <= 20 ? 5 : maxN <= 50 ? 10 : maxN <= 100 ? 20 : 50;
+    const top = Math.ceil(maxN / step) * step;
+    const x = i => m.l + (pts.length === 1 ? iw/2 : i * iw / (pts.length - 1));
+    const y = n => m.t + ih - n / top * ih;
+
+    const s = svg("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "주간 읽은 리포트 수 선 그래프"});
+    const g = svg("g", {class: "grid"}), ax = svg("g", {class: "axis"});
+    for (let v = 0; v <= top; v += step) {
+      g.appendChild(svg("line", {x1: m.l, x2: W - m.r, y1: y(v), y2: y(v)}));
+      const tx = svg("text", {x: m.l - 8, y: y(v) + 4, "text-anchor": "end"}); tx.textContent = v; ax.appendChild(tx);
+    }
+    const every = Math.ceil(pts.length / Math.max(1, Math.floor(iw / 56)));
+    pts.forEach((p, i) => {
+      if (i % every && i !== pts.length - 1) return;
+      const tx = svg("text", {x: x(i), y: H - 6, "text-anchor": "middle"}); tx.textContent = md(p.w); ax.appendChild(tx);
+    });
+    s.appendChild(g); s.appendChild(ax);
+
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i)},${y(p.n)}`).join("");
+    s.appendChild(svg("path", {class: "area", d: `${d}L${x(pts.length-1)},${y(0)}L${x(0)},${y(0)}Z`}));
+    s.appendChild(svg("path", {class: "line", d}));
+    pts.forEach((p, i) => s.appendChild(svg("circle", {class: "dot", cx: x(i), cy: y(p.n), r: 4})));
+
+    // 최댓값과 마지막 값만 직접 표시
+    const maxI = pts.findIndex(p => p.n === maxN);
+    [...new Set([maxI, pts.length - 1])].forEach(i => {
+      const tx = svg("text", {class: "vlabel", x: x(i), y: y(pts[i].n) - 9, "text-anchor": "middle"}); tx.textContent = pts[i].n; s.appendChild(tx);
+    });
+
+    // 호버: 십자선 + 툴팁
+    const cross = svg("line", {class: "cross", y1: m.t, y2: m.t + ih, visibility: "hidden"});
+    const hot = svg("circle", {class: "dot", r: 6, visibility: "hidden"});
+    s.appendChild(cross); s.appendChild(hot);
+    const hit = svg("rect", {x: m.l - 10, y: 0, width: iw + 20, height: H, fill: "transparent"});
+    s.appendChild(hit);
+    box.appendChild(s);
+    const tip = el("div", "tip"); tip.hidden = true; box.appendChild(tip);
+
+    function show(evt){
+      const rect = s.getBoundingClientRect();
+      const px = (evt.clientX - rect.left) * W / rect.width;
+      let i = pts.length === 1 ? 0 : Math.round((px - m.l) / (iw / (pts.length - 1)));
+      i = Math.max(0, Math.min(pts.length - 1, i));
+      const p = pts[i];
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      hot.setAttribute("cx", x(i)); hot.setAttribute("cy", y(p.n)); hot.setAttribute("visibility", "visible");
+      tip.replaceChildren(el("b", null, p.n + "건"), el("br"), document.createTextNode(`${md(p.w)} ~ ${md(p.e)}`));
+      tip.style.left = (x(i) * rect.width / W) + "px";
+      tip.style.top = (y(p.n) * rect.height / H) + "px";
+      tip.hidden = false;
+    }
+    function hide(){ cross.setAttribute("visibility", "hidden"); hot.setAttribute("visibility", "hidden"); tip.hidden = true; }
+    hit.addEventListener("pointermove", show);
+    hit.addEventListener("pointerdown", show);
+    hit.addEventListener("pointerleave", hide);
+  }
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => renderWeekly(lastFiltered), 150); });
 
   // 상단 요약
   const stats = document.getElementById("stats");
