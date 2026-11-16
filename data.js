@@ -4,7 +4,7 @@ window.CONSENSUS = {
 updated: "2026-11-16",
 rows: [
 ["41a4d3d8697c80b59649decfa6111df7", "261116", null, null, null, null, null, null, null],
-["41a4d3d8697c80a0834ad29e4357eee8", "261116", null, null, null, null, null, null, null],
+["41a4d3d8697c80a0834ad29e4357eee8", "261116", "지니언스", "유진", "N", null, null, null, null],
 ["41a4d3d8697c80ce9b7bd928eff69cb6", "261116", "롯데에너지머티리얼즈", "SK", "B", 60, null, null, null],
 ["41a4d3d8697c808aa905c4c1216eab40", "261116", "아이티센엔텍", "유진", "N", null, null, null, null],
 ["41a4d3d8697c80329cb9da37fc6ef0f7", "261116", "DI동일", "유진", "B", 64, null, null, null],
