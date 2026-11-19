@@ -1,0 +1,39 @@
+/* 공통: 색 토큰, 기본 글꼴, 사이드바 레이아웃 */
+:root{
+  --bg:#f6f7f9; --surface:#fff; --text:#16181d; --muted:#6b7280; --line:#e6e8ec;
+  --accent:#4f5bd5; --accent-soft:#eef0fd;
+  --cb:#b45309; --cb-soft:#fef3c7; --buy:#4f5bd5; --buy-soft:#eef0fd;
+  --hold:#6b7280; --hold-soft:#f1f2f4; --nr:#0e7490; --nr-soft:#e0f4f8;
+  --up:#d63b3b; --down:#2563eb; --star:#16a34a;
+  --s-price:#2a78d6; --s-stock:#8a8f98; --s-spread:#0f8a6a; --s-spread2:#b8590f;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115; --surface:#171a20; --text:#eceef2; --muted:#9aa1ad; --line:#262a33;
+  --accent:#8b94f5; --accent-soft:#232744;
+  --cb:#fbbf24; --cb-soft:#3a2e10; --buy:#8b94f5; --buy-soft:#232744;
+  --hold:#a1a7b3; --hold-soft:#242830; --nr:#5fc6dc; --nr-soft:#12303a;
+  --up:#f87171; --down:#60a5fa; --star:#4ade80;
+  --s-price:#5fa3ee; --s-stock:#a3a9b3; --s-spread:#3cc79d; --s-spread2:#e8914a;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased}
+
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;border-right:1px solid var(--line);padding:28px 14px;display:flex;flex-direction:column;gap:4px}
+.side .brand{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.02em;padding:0 10px 14px}
+.side a{display:flex;flex-direction:column;gap:2px;text-decoration:none;color:var(--text);padding:10px;border-radius:10px;font-size:14px;font-weight:600}
+.side a small{font-size:12px;font-weight:400;color:var(--muted)}
+.side a:hover{background:var(--surface)}
+.side a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.side a[aria-current="page"] small{color:var(--accent)}
+.wrap{max-width:1200px;width:100%;margin:0 auto;padding:32px 16px 64px}
+
+@media (max-width:860px){
+  .app{display:block}
+  .side{position:static;height:auto;flex-direction:row;gap:6px;border-right:0;border-bottom:1px solid var(--line);padding:10px 16px;overflow-x:auto}
+  .side .brand{display:none}
+  .side a{padding:8px 12px;white-space:nowrap;font-size:13px}
+  .side a small{display:none}
+}

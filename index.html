@@ -5,25 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>컨센서스 노트</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
 <style>
-:root{
-  --bg:#f6f7f9; --surface:#fff; --text:#16181d; --muted:#6b7280; --line:#e6e8ec;
-  --accent:#4f5bd5; --accent-soft:#eef0fd;
-  --cb:#b45309; --cb-soft:#fef3c7; --buy:#4f5bd5; --buy-soft:#eef0fd;
-  --hold:#6b7280; --hold-soft:#f1f2f4; --nr:#0e7490; --nr-soft:#e0f4f8;
-  --up:#d63b3b; --down:#2563eb; --star:#16a34a;
-  --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f1115; --surface:#171a20; --text:#eceef2; --muted:#9aa1ad; --line:#262a33;
-  --accent:#8b94f5; --accent-soft:#232744;
-  --cb:#fbbf24; --cb-soft:#3a2e10; --buy:#8b94f5; --buy-soft:#232744;
-  --hold:#a1a7b3; --hold-soft:#242830; --nr:#5fc6dc; --nr-soft:#12303a;
-  --up:#f87171; --down:#60a5fa; --star:#4ade80; --shadow:none;
-}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1200px;margin:0 auto;padding:32px 16px 64px}
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
 h1{margin:0;font-size:26px;letter-spacing:-.02em}
 .sub{margin:6px 0 0;color:var(--muted);font-size:14px}
@@ -116,6 +99,12 @@ a.slot:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
+<div class="app">
+<nav class="side" aria-label="페이지">
+  <div class="brand">시장 리서치</div>
+  <a href="index.html" aria-current="page">컨센서스 노트<small>증권사 리포트 기록</small></a>
+  <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
+</nav>
 <div class="wrap">
   <header>
     <div>
@@ -167,6 +156,7 @@ a.slot:hover{border-color:var(--accent)}
 
   <main id="list"></main>
   <footer id="foot"></footer>
+</div>
 </div>
 
 <script src="data.js"></script>

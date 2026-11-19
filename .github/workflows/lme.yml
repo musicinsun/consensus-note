@@ -1,0 +1,31 @@
+name: LME 알루미늄 갱신
+
+on:
+  schedule:
+    - cron: "0 23 * * 1-5"   # 매주 화~토 오전 8시(한국시간) = 전 거래일 런던 장 마감 데이터
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-push
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python fetch_lme.py
+      - name: 변경 사항 커밋
+        run: |
+          git config user.name "lme-sync"
+          git config user.email "lme-sync@users.noreply.github.com"
+          git add lme.js
+          git diff --cached --quiet && exit 0
+          git commit -m "LME 알루미늄 갱신"
+          git pull --rebase
+          git push

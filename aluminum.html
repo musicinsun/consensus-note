@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LME 알루미늄 팔로우</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+<style>
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{margin:0;font-size:26px;letter-spacing:-.02em}
+.sub{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.ranges{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.ranges button{font:inherit;font-size:13px;border:0;background:none;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer}
+.ranges button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi .d{font-size:12px;margin-top:2px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pos{color:var(--up)} .neg{color:var(--down)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 16px 10px;box-shadow:var(--shadow);margin-bottom:12px;min-width:0}
+.card h2{margin:0;font-size:15px}
+.card p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.chart{position:relative;margin-top:6px}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart .gl{stroke:var(--line)}
+.chart .zero{stroke:var(--muted);stroke-dasharray:4 3}
+.chart text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.chart .plabel{fill:var(--text);font-size:12px;font-weight:600}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .cross{stroke:var(--muted);stroke-dasharray:3 3}
+.chart .hd{stroke:var(--surface);stroke-width:2}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--text);color:var(--surface);font-size:12px;line-height:1.5;padding:6px 9px;border-radius:8px;white-space:nowrap;font-variant-numeric:tabular-nums;z-index:2}
+.tip .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+details.tbl{margin-top:4px;font-size:13px;color:var(--muted)}
+details.tbl summary{cursor:pointer;width:max-content}
+details.tbl table{border-collapse:collapse;margin-top:8px;font-variant-numeric:tabular-nums;width:100%;max-width:640px}
+details.tbl th,details.tbl td{padding:5px 10px 5px 0;text-align:right;border-bottom:1px solid var(--line);font-weight:400}
+details.tbl th:first-child,details.tbl td:first-child{text-align:left}
+details.tbl td{color:var(--text)}
+.note{font-size:12px;color:var(--muted);margin-top:24px;line-height:1.6}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="side" aria-label="페이지">
+  <div class="brand">시장 리서치</div>
+  <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
+  <a href="aluminum.html" aria-current="page">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
+</nav>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>LME 알루미늄 팔로우</h1>
+      <p class="sub">삼아알미늄 판가 구조: 원재료는 LME 1개월 전 가격에 사고, 제품은 6개월 전 가격에 팔아요.<br><span id="asof"></span></p>
+    </div>
+    <div class="ranges" role="group" aria-label="기간">
+      <button data-m="3">3개월</button><button data-m="6">6개월</button><button data-m="12" aria-pressed="true">1년</button><button data-m="0">전체</button>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2">
+    <section class="card"><h2>1. LME 알루미늄 현물가</h2><p>Cash-Settlement · USD/톤</p><div class="chart" id="c1"></div></section>
+    <section class="card"><h2>2. LME 알루미늄 재고</h2><p>톤</p><div class="chart" id="c2"></div></section>
+  </div>
+  <section class="card"><h2>3. 현물가 + 재고</h2><p>같은 날짜축 · 마우스를 올리면 두 값을 함께 보여줘요</p><div class="chart" id="c3"></div></section>
+  <div class="grid2">
+    <section class="card"><h2>4. 스프레드: 6개월 전 − 1개월 전</h2><p>판매 기준가 − 매입 기준가 · 0 위면 시차가 유리 · USD/톤</p><div class="chart" id="c4"></div></section>
+    <section class="card"><h2>5. 스프레드: 3개월 전 − 1개월 전</h2><p>USD/톤</p><div class="chart" id="c5"></div></section>
+  </div>
+
+  <section class="card">
+    <details class="tbl"><summary>최근 20거래일 표로 보기</summary><div id="tbl"></div></details>
+  </section>
+
+  <p class="note">출처: westmetall.com (LME 공식 가격을 재게시). 매일 오전 8시(한국시간)에 전 거래일 데이터로 갱신돼요. 스프레드의 "N개월 전 가격"은 그 날짜 이전 가장 가까운 거래일의 현물가예요.</p>
+</div>
+</div>
+
+<script src="lme.js"></script>
+<script>
+(function(){
+  const RAW = (window.LME && window.LME.rows) || [];
+  const NS = "http://www.w3.org/2000/svg";
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
+  const sv = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const fmt0 = v => v == null ? "–" : Math.round(v).toLocaleString("en-US");
+  const fmtS = v => v == null ? "–" : (v > 0 ? "+" : "") + Math.round(v).toLocaleString("en-US");
+
+  // 날짜 파싱 + 현물가 조회(해당일 이전 가장 가까운 거래일)
+  const rows = RAW.filter(r => r[1] != null).map(r => ({d: r[0], t: new Date(r[0] + "T00:00:00"), cash: r[1], m3: r[2], stock: r[3]}));
+  function priceOnOrBefore(t){
+    let lo = 0, hi = rows.length - 1, ans = -1;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (rows[mid].t <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1; }
+    return ans < 0 ? null : rows[ans].cash;
+  }
+  const monthsAgo = (t, m) => { const x = new Date(t); const day = x.getDate(); x.setDate(1); x.setMonth(x.getMonth() - m); x.setDate(Math.min(day, new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate())); return x; };
+  const first = rows.length ? rows[0].t : null;
+  rows.forEach(r => {
+    const p1 = priceOnOrBefore(monthsAgo(r.t, 1)), p3 = priceOnOrBefore(monthsAgo(r.t, 3)), p6 = priceOnOrBefore(monthsAgo(r.t, 6));
+    const ok6 = monthsAgo(r.t, 6) >= first, ok3 = monthsAgo(r.t, 3) >= first;
+    r.s61 = ok6 && p6 != null && p1 != null ? p6 - p1 : null;
+    r.s31 = ok3 && p3 != null && p1 != null ? p3 - p1 : null;
+  });
+
+  function niceTicks(lo, hi, n){
+    if (lo === hi) { lo -= 1; hi += 1; }
+    const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+    const a = Math.floor(lo / step) * step, b = Math.ceil(hi / step) * step, out = [];
+    for (let v = a; v <= b + step / 2; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+  const shortNum = v => Math.abs(v) >= 1000 ? (v / 1000).toLocaleString("en-US", {maximumFractionDigits: 1}) + "k" : String(v);
+
+  // panels: [{key, color, label, zero, fmt}] — 같은 날짜축에 위아래로 쌓음
+  function chart(box, data, panels, ph){
+    box.replaceChildren();
+    if (!data.length) { box.appendChild(el("p", null, "데이터가 없어요.")); return; }
+    const W = Math.max(box.clientWidth, 280), m = {t: 10, r: 12, b: 24, l: 44}, gap = 26;
+    const H = m.t + panels.length * ph + (panels.length - 1) * gap + m.b;
+    const iw = W - m.l - m.r, n = data.length;
+    const x = i => m.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
+    const s = sv("svg", {viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": panels.map(p => p.label).join(", ") + " 선 그래프"});
+    const scales = panels.map((p, k) => {
+      const top = m.t + k * (ph + gap), vals = data.map(r => r[p.key]).filter(v => v != null);
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      if (p.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+      const tk = niceTicks(lo, hi, 4), a = tk[0], b = tk[tk.length - 1];
+      const y = v => top + ph - (v - a) / (b - a) * ph;
+      tk.forEach(v => {
+        s.appendChild(sv("line", {class: v === 0 && p.zero ? "zero" : "gl", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v)}));
+        const t = sv("text", {x: m.l - 6, y: y(v) + 4, "text-anchor": "end"}); t.textContent = shortNum(v); s.appendChild(t);
+      });
+      if (panels.length > 1) { const t = sv("text", {class: "plabel", x: m.l + 4, y: top + 12}); t.textContent = p.label; s.appendChild(t); }
+      let d = "", pen = false;
+      data.forEach((r, i) => { const v = r[p.key]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; });
+      s.appendChild(sv("path", {class: "ln", d, stroke: css(p.color)}));
+      return {y, p};
+    });
+    // x축 라벨
+    const span = (data[n - 1].t - data[0].t) / 864e5;
+    const lab = t => span > 200 ? `${String(t.getFullYear()).slice(2)}.${String(t.getMonth() + 1).padStart(2, "0")}` : `${t.getMonth() + 1}/${t.getDate()}`;
+    const cnt = Math.max(2, Math.floor(iw / 80));
+    for (let k = 0; k < cnt; k++) {
+      const i = Math.round(k * (n - 1) / (cnt - 1));
+      const t = sv("text", {x: x(i), y: H - 6, "text-anchor": k === 0 ? "start" : k === cnt - 1 ? "end" : "middle"}); t.textContent = lab(data[i].t); s.appendChild(t);
+    }
+    // 호버
+    const cross = sv("line", {class: "cross", y1: m.t, y2: H - m.b, visibility: "hidden"}); s.appendChild(cross);
+    const dots = scales.map(sc => { const c = sv("circle", {class: "hd", r: 5, fill: css(sc.p.color), visibility: "hidden"}); s.appendChild(c); return c; });
+    const hit = sv("rect", {x: m.l, y: 0, width: iw, height: H, fill: "transparent"}); s.appendChild(hit);
+    box.appendChild(s);
+    const tip = el("div", "tip"); tip.hidden = true; box.appendChild(tip);
+    function show(e){
+      const rc = s.getBoundingClientRect(), px = (e.clientX - rc.left) * W / rc.width;
+      const i = Math.max(0, Math.min(n - 1, Math.round((px - m.l) / (iw / Math.max(1, n - 1)))));
+      const r = data[i];
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      tip.replaceChildren(el("div", null, r.d));
+      scales.forEach((sc, k) => {
+        const v = r[sc.p.key];
+        if (v == null) dots[k].setAttribute("visibility", "hidden");
+        else { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", sc.y(v)); dots[k].setAttribute("visibility", "visible"); }
+        const line = el("div"); const sw = el("span", "sw"); sw.style.background = css(sc.p.color);
+        line.appendChild(sw); line.appendChild(document.createTextNode(`${sc.p.label} ${sc.p.fmt(v)}`)); tip.appendChild(line);
+      });
+      tip.hidden = false;
+      const tx = x(i) * rc.width / W, tw = tip.offsetWidth;
+      tip.style.left = Math.min(Math.max(0, tx - tw / 2), rc.width - tw) + "px";
+      tip.style.top = "-8px"; tip.style.transform = "translateY(-100%)";
+    }
+    const hide = () => { cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.hidden = true; };
+    hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", hide);
+  }
+
+  const P_PRICE = {key: "cash", color: "--s-price", label: "현물가", fmt: v => "$" + fmt0(v)};
+  const P_STOCK = {key: "stock", color: "--s-stock", label: "재고", fmt: v => fmt0(v) + "t"};
+  const P_S61 = {key: "s61", color: "--s-spread", label: "6M−1M", zero: true, fmt: v => "$" + fmtS(v)};
+  const P_S31 = {key: "s31", color: "--s-spread2", label: "3M−1M", zero: true, fmt: v => "$" + fmtS(v)};
+
+  // KPI
+  function kpis(){
+    const box = document.getElementById("kpis"); box.replaceChildren();
+    if (!rows.length) return;
+    const L = rows[rows.length - 1], Pv = rows[rows.length - 2] || L;
+    const tile = (label, val, sub, cls) => { const k = el("div", "kpi"); k.appendChild(el("div", "l", label)); k.appendChild(el("div", "v " + (cls || ""), val)); k.appendChild(el("div", "d", sub)); box.appendChild(k); };
+    const dc = L.cash - Pv.cash, ds = (L.stock ?? 0) - (Pv.stock ?? 0);
+    tile("현물가", "$" + fmt0(L.cash), `전일 대비 ${fmtS(dc)}`);
+    tile("재고", fmt0(L.stock) + "t", `전일 대비 ${fmtS(ds)}t`);
+    tile("스프레드 6M−1M", "$" + fmtS(L.s61), "판매가 − 매입가 기준", L.s61 > 0 ? "pos" : L.s61 < 0 ? "neg" : "");
+    tile("스프레드 3M−1M", "$" + fmtS(L.s31), "3개월 전 − 1개월 전", L.s31 > 0 ? "pos" : L.s31 < 0 ? "neg" : "");
+    document.getElementById("asof").textContent = `기준일 ${L.d} · 갱신 ${window.LME.updated}`;
+  }
+
+  function table(){
+    const t = el("table"), h = el("tr");
+    ["날짜", "현물가", "3개월물", "재고", "6M−1M", "3M−1M"].forEach(c => h.appendChild(el("th", null, c))); t.appendChild(h);
+    rows.slice(-20).reverse().forEach(r => { const tr = el("tr"); [r.d, fmt0(r.cash), fmt0(r.m3), fmt0(r.stock), fmtS(r.s61), fmtS(r.s31)].forEach(c => tr.appendChild(el("td", null, c))); t.appendChild(tr); });
+    document.getElementById("tbl").replaceChildren(t);
+  }
+
+  let months = 12;
+  function render(){
+    const last = rows.length ? rows[rows.length - 1].t : new Date();
+    const from = months ? monthsAgo(last, months) : new Date(0);
+    const data = rows.filter(r => r.t > from);
+    chart(document.getElementById("c1"), data, [P_PRICE], 200);
+    chart(document.getElementById("c2"), data, [P_STOCK], 200);
+    chart(document.getElementById("c3"), data, [P_PRICE, P_STOCK], 150);
+    chart(document.getElementById("c4"), data, [P_S61], 200);
+    chart(document.getElementById("c5"), data, [P_S31], 200);
+  }
+  document.querySelectorAll(".ranges button").forEach(b => b.addEventListener("click", () => {
+    months = +b.dataset.m;
+    document.querySelectorAll(".ranges button").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+    render();
+  }));
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  kpis(); table(); render();
+})();
+</script>
+</body>
+</html>
