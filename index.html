@@ -103,7 +103,7 @@ a.slot:hover{border-color:var(--accent)}
 .blog-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);font-size:13px;color:var(--muted)}
 .blog-paper{background:#fff;color:#222;padding:24px 28px;max-height:560px;overflow:auto;font-size:15px;line-height:1.75}
 .blog-paper h1{font-size:22px;margin:0 0 12px} .blog-paper h2{font-size:18px} .blog-paper h3{font-size:16px} .blog-paper h4{font-size:15px}
-.blog-paper table{border-collapse:collapse;margin:8px 0} .blog-paper a{color:#2a5bd7}
+.blog-paper table{border-collapse:collapse;margin:8px 0} .blog-paper img{max-width:100%;height:auto} .blog-paper a{color:#2a5bd7}
 @media (max-width:640px){.blogbtn .lbl{display:none}}
 @media (max-width:640px){.slots{grid-template-columns:repeat(2,minmax(0,1fr))}.hero .hname{font-size:20px}}
 </style>
@@ -473,9 +473,17 @@ a.slot:hover{border-color:var(--accent)}
   function metaLine(r){ return [r.broker, opTxt(r), upTxt(r) && "UPSIDE " + upTxt(r)].filter(Boolean).map(esc).join(" · "); }
   function noteBlock(r){
     const why = r.why ? `<blockquote style="border-left:3px solid #f0b429;margin:8px 0;padding:2px 0 2px 12px;color:#555">선정 이유: ${esc(r.why)}</blockquote>` : "";
-    const body = NOTES[r.id];
-    return why + (body ? body : `<p style="color:#999">(노션 본문은 다음 동기화 때 들어가요)</p>`);
+    return why + bodyHtml(r);
   }
+  // 이미지 경로를 절대 주소로 바꿔야 네이버에 붙여넣었을 때도 이미지가 보임
+  const IMG_BASE = new URL("images/", location.href).href;
+  function bodyHtml(r){
+    const n = NOTES[r.id], h = n && (typeof n === "string" ? n : n.h);
+    if (n == null) return `<p style="color:#999">(노션 본문은 다음 동기화 때 들어가요)</p>`;
+    const clean = (h || "").replace(/(<p>&nbsp;<\/p>)+$/, "");
+    return clean.replace(/src="images\//g, `src="${IMG_BASE}`);
+  }
+  const hasBody = r => { const n = NOTES[r.id], h = n && (typeof n === "string" ? n : n.h); return !!(h && h.replace(/<p>&nbsp;<\/p>/g, "").trim()); };
   function buildBlog(){
     const mon = pkWeek, sun = addDays(mon, 6);
     const keys = new Set([0,1,2,3,4,5,6].map(i => ymd(addDays(mon, i))));
@@ -513,8 +521,19 @@ a.slot:hover{border-color:var(--accent)}
       ["기업","증권사","투자의견","UPSIDE"].map(c => `<th style="border:1px solid #ccc;padding:4px 10px;background:#f6f6f6">${c}</th>`).join("") + "</tr>" +
       list.map(r => `<tr>${[(r === pick ? "🏅 " : "") + r.name, r.broker, opTxt(r), upTxt(r)].map(c => `<td style="border:1px solid #ccc;padding:4px 10px">${esc(c)}</td>`).join("")}</tr>`).join("") + "</table>";
     if (pick) h += `<h2>🏅 오늘의 보고서 · ${esc(pick.name)}</h2><p><b>${metaLine(pick)}</b></p>` + noteBlock(pick);
-    else h += `<p style="color:#999">(이날 오늘의 보고서를 아직 고르지 않았어요. 노션에서 '선정'을 오늘의로 골라 주세요.)</p>`;
-    const tags = ["컨센서스", "증권사리포트", "주식공부", "오늘의보고서", ...(pick ? [pick.name.replace(/\s+/g, "")] : [])];
+    const rest = list.filter(r => r !== pick);
+    if (rest.length) {
+      h += `<h2>📝 리포트별 정리</h2>`;
+      rest.forEach(r => {
+        h += `<h3>${esc(r.name)}${r.broker ? " · " + esc(r.broker) : ""}</h3>`;
+        const meta = [opTxt(r), upTxt(r) && "UPSIDE " + upTxt(r)].filter(Boolean).map(esc).join(" · ");
+        if (meta) h += `<p><b>${meta}</b></p>`;
+        if (hasBody(r)) h += bodyHtml(r);
+        else if (NOTES[r.id] == null) h += `<p style="color:#999">(노션 본문은 다음 동기화 때 들어가요)</p>`;
+        h += "<hr>";
+      });
+    }
+    const tags = ["컨센서스", "증권사리포트", "주식공부", "오늘의보고서", ...list.map(r => r.name.replace(/\s+/g, ""))];
     h += `<p style="color:#888">${[...new Set(tags)].map(t => "#" + esc(t)).join(" ")}</p>`;
     return h;
   }
