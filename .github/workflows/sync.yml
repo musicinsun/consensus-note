@@ -30,11 +30,12 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           ONLY_DATES: ${{ github.event.inputs.only_dates }}
+          IMAGES_TOKEN: ${{ secrets.IMAGES_TOKEN }}   # consensus-images-<연도> 저장소에 이미지를 올리는 토큰
       - name: 변경 사항 커밋
         run: |
           git config user.name "notion-sync"
           git config user.email "notion-sync@users.noreply.github.com"
-          git add data.js images
+          git add data.js
           git diff --cached --quiet && exit 0
           git commit -m "노션 동기화"
           git pull --rebase

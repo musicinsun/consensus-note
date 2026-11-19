@@ -1,10 +1,12 @@
-"""노션 '컨센서스 프로젝트' DB를 읽어 data.js와 images/를 새로 만듭니다.
+"""노션 '컨센서스 프로젝트' DB를 읽어 data.js를 새로 만들고, 본문 이미지는 연도별 이미지 저장소에 올립니다.
 
-사용법:  NOTION_TOKEN=secret_xxx python sync_notion.py
+사용법:  NOTION_TOKEN=... IMAGES_TOKEN=... python sync_notion.py
 필요: 노션 내부 통합(Integration) 토큰, 그리고 DB 페이지에서 그 통합을 '연결'해 두기.
+     IMAGES_TOKEN: consensus-images-<연도> 저장소에 쓸 수 있는 GitHub 토큰 (없으면 이미지는 건너뜀)
 
 - 모든 리포트의 노션 본문을 블로그용 HTML로 변환해 data.js의 window.NOTES에 저장
-- 본문 이미지는 images/에 내려받아 저장 (노션 이미지 주소는 1시간이면 만료되므로)
+- 본문 이미지는 리포트 날짜의 연도별 저장소(musicinsun/consensus-images-<연도>)에 올림
+  (노션 이미지 주소는 1시간이면 만료되고, 네이버 블로그가 이 주소를 직접 불러오므로 지우면 안 됨)
 - 지난 동기화 이후 수정된 페이지만 다시 읽음 (last_edited_time 비교)
 - Pillow가 있으면 이미지를 가로 1200px, JPEG로 줄여 저장
 """
@@ -13,6 +15,7 @@ import html
 import json
 import os
 import pathlib
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -26,7 +29,10 @@ DATA_SOURCE_ID = "3f74d3d8-697c-8006-b6b3-000b3e6d9a6b"
 OP_CODES = {"CONVICTION BUY": "C", "BUY": "B", "HOLD": "H", "SELL": "S", "NR": "N", "수주 코멘트": "J"}
 ROOT = pathlib.Path(__file__).parent
 OUT = ROOT / "data.js"
-IMG_DIR = ROOT / "images"
+IMG_OWNER = "musicinsun"
+IMG_REPO = "consensus-images-{year}"
+IMG_URL = "https://musicinsun.github.io/consensus-images-{year}/"
+IMG_WORK = ROOT / ".imgrepos"
 HEADERS = {}
 
 
@@ -73,24 +79,77 @@ def children(block_id):
         cursor = res["next_cursor"]
 
 
-# ── 이미지 저장 ──
-def save_image(block_id, url):
-    """images/<블록ID>.jpg 로 저장하고 사이트 기준 상대 경로를 돌려줌. 이미 있으면 다시 받지 않음."""
-    IMG_DIR.mkdir(exist_ok=True)
-    for ext in (".jpg", ".png", ".gif", ".webp"):
-        if (IMG_DIR / (block_id + ext)).exists():
-            return f"images/{block_id}{ext}"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        raw = r.read()
-    tmp = IMG_DIR / (block_id + ".tmp")
-    tmp.write_bytes(raw)
+# ── 이미지 저장: 연도별 GitHub 저장소 ──
+def git(cwd, *args):
+    return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout
+
+
+class ImageStore:
+    """연도별 이미지 저장소를 파일 내용 없이(목록만) 받아 두고, 새 이미지만 추가해 마지막에 한 번에 올림."""
+
+    def __init__(self):
+        self.token = os.environ.get("IMAGES_TOKEN", "")
+        self.repos = {}  # year -> (dir, 기존 파일 이름 set) 또는 None(사용 불가)
+        self.added = {}  # year -> [파일 이름]
+
+    def repo(self, year):
+        if year in self.repos:
+            return self.repos[year]
+        if not self.token:
+            self.repos[year] = None
+            return None
+        d = IMG_WORK / str(year)
+        url = f"https://x-access-token:{self.token}@github.com/{IMG_OWNER}/{IMG_REPO.format(year=year)}.git"
+        try:
+            if not d.exists():
+                IMG_WORK.mkdir(exist_ok=True)
+                subprocess.run(["git", "clone", "-q", "--depth", "1", "--filter=blob:none", "--no-checkout", url, str(d)],
+                               check=True, capture_output=True, text=True)
+                git(d, "read-tree", "HEAD")
+            names = set(git(d, "ls-tree", "-r", "--name-only", "HEAD").split())
+            self.repos[year] = (d, names)
+        except subprocess.CalledProcessError as e:
+            print(f"이미지 저장소 {IMG_REPO.format(year=year)} 를 열 수 없어요: {e.stderr.strip()[:200]}")
+            self.repos[year] = None
+        return self.repos[year]
+
+    def save(self, year, block_id, url):
+        """이미지 공개 주소를 돌려줌. 이미 올라가 있으면 다시 받지 않음."""
+        r = self.repo(year)
+        if r is None:
+            return None
+        d, names = r
+        for ext in (".jpg", ".png", ".gif", ".webp"):
+            if block_id + ext in names:
+                return IMG_URL.format(year=year) + block_id + ext
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = resp.read()
+        name = compress(raw, d, block_id)
+        names.add(name)
+        self.added.setdefault(year, []).append(name)
+        return IMG_URL.format(year=year) + name
+
+    def push(self):
+        for year, files in self.added.items():
+            d = self.repos[year][0]
+            git(d, "config", "user.name", "notion-sync")
+            git(d, "config", "user.email", "notion-sync@users.noreply.github.com")
+            git(d, "add", "--", *files)
+            git(d, "commit", "-q", "-m", f"이미지 {len(files)}개 추가")
+            git(d, "push", "-q", "origin", "HEAD:main")
+            print(f"{IMG_REPO.format(year=year)} 에 이미지 {len(files)}개 올림")
+
+
+def compress(raw, d, block_id):
+    """가로 1200px JPEG로 줄여 저장하고 파일 이름을 돌려줌 (Pillow 없거나 움짤이면 원본)."""
     try:
         if Image is None:
             raise RuntimeError
-        with Image.open(tmp) as im:
+        import io
+        with Image.open(io.BytesIO(raw)) as im:
             if getattr(im, "is_animated", False):
-                raise RuntimeError  # 움짤은 그대로
+                raise RuntimeError
             if im.mode in ("RGBA", "LA", "P"):
                 im = im.convert("RGBA")
                 bg = Image.new("RGB", im.size, "white")
@@ -100,13 +159,17 @@ def save_image(block_id, url):
                 im = im.convert("RGB")
             if im.width > 1200:
                 im = im.resize((1200, round(im.height * 1200 / im.width)))
-            im.save(IMG_DIR / (block_id + ".jpg"), "JPEG", quality=75, optimize=True)
-        tmp.unlink()
-        return f"images/{block_id}.jpg"
+            im.save(d / (block_id + ".jpg"), "JPEG", quality=75, optimize=True)
+        return block_id + ".jpg"
     except Exception:
         ext = ".gif" if raw[:3] == b"GIF" else ".png" if raw[:4] == b"\x89PNG" else ".webp" if raw[8:12] == b"WEBP" else ".jpg"
-        tmp.replace(IMG_DIR / (block_id + ext))
-        return f"images/{block_id}{ext}"
+        (d / (block_id + ext)).write_bytes(raw)
+        return block_id + ext
+
+
+STORE = ImageStore()
+PAGE_YEAR = [datetime.date.today().year]  # 지금 변환 중인 리포트의 연도
+IMG_FAILED = [False]  # 이번 페이지에서 이미지 저장에 실패했는지 (실패하면 다음에 다시 읽음)
 
 
 # ── 노션 페이지 본문 → 블로그에 붙여넣기 좋은 HTML ──
@@ -149,9 +212,12 @@ def image_html(b, v):
     if not src:
         return ""
     try:
-        path = save_image(b["id"].replace("-", ""), src)
+        path = STORE.save(PAGE_YEAR[0], b["id"].replace("-", ""), src)
     except Exception as e:
         print(f"  이미지 저장 실패 {b['id']}: {e}")
+        path = None
+    if not path:
+        IMG_FAILED[0] = True
         return '<p style="color:#999">[이미지: 노션에서 확인]</p>'
     out = f'<p><img src="{path}" style="max-width:100%"></p>'
     return out + (f'<p style="color:#888;font-size:13px">{cap}</p>' if cap else "")
@@ -278,13 +344,25 @@ def main():
             if pid in old:
                 notes[pid] = old[pid]
             continue
+        d = date_of.get(pid)
+        PAGE_YEAR[0] = 2000 + int(d[:2]) if d and d[:2].isdigit() else datetime.date.today().year
+        IMG_FAILED[0] = False
         try:
-            notes[pid] = {"t": edited, "h": blocks_html(pid)}
+            h = blocks_html(pid)
+            notes[pid] = {"t": "" if IMG_FAILED[0] else edited, "h": h}  # 이미지 실패 시 다음 동기화에서 다시 시도
             fetched += 1
         except Exception as e:  # 한 페이지 실패가 전체 동기화를 막지 않게
             print(f"본문 읽기 실패 {pid}: {e}")
             if pid in old:
                 notes[pid] = old[pid]
+
+    STORE.push()
+    # 예전 형식(사이트 안 images/ 폴더) 경로를 연도별 저장소 주소로 바꿈
+    for pid, n in notes.items():
+        if 'src="images/' in n.get("h", ""):
+            d = date_of.get(pid)
+            y = 2000 + int(d[:2]) if d and d[:2].isdigit() else datetime.date.today().year
+            n["h"] = n["h"].replace('src="images/', f'src="{IMG_URL.format(year=y)}')
 
     lines = ",\n".join(json.dumps(r, ensure_ascii=False) for r in rows)
     notes_js = json.dumps(notes, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
@@ -297,8 +375,8 @@ def main():
         f"window.NOTES = {notes_js};\n",
         encoding="utf-8",
     )
-    imgs = len(list(IMG_DIR.glob("*"))) if IMG_DIR.exists() else 0
-    print(f"{len(rows)}건 저장, 본문 {len(notes)}건 (이번에 새로 읽음 {fetched}건), 이미지 {imgs}개 → {OUT.name}")
+    added = sum(len(v) for v in STORE.added.values())
+    print(f"{len(rows)}건 저장, 본문 {len(notes)}건 (이번에 새로 읽음 {fetched}건), 새 이미지 {added}개 → {OUT.name}")
 
 
 if __name__ == "__main__":
