@@ -516,10 +516,8 @@ a.slot:hover{border-color:var(--accent)}
     const dt = toDate(key), day = DAYS[dt.getDay()];
     const title = `${dt.getMonth()+1}월 ${dt.getDate()}일(${day}) 컨센서스 노트` + (pick ? ` | 오늘의 보고서: ${pick.name}` : "");
     let h = `<h1>${esc(title)}</h1>`;
-    h += `<p>오늘은 증권사 리포트 <b>${list.length}건</b>을 읽었어요.${pick ? ` 그중 오늘의 보고서로 <b>${esc(pick.name)}</b>을(를) 골랐어요.` : ""}</p>`;
-    h += `<h2>📋 오늘 읽은 리포트</h2><table style="border-collapse:collapse"><tr>` +
-      ["기업","증권사","투자의견","UPSIDE"].map(c => `<th style="border:1px solid #ccc;padding:4px 10px;background:#f6f6f6">${c}</th>`).join("") + "</tr>" +
-      list.map(r => `<tr>${[(r === pick ? "🏅 " : "") + r.name, r.broker, opTxt(r), upTxt(r)].map(c => `<td style="border:1px solid #ccc;padding:4px 10px">${esc(c)}</td>`).join("")}</tr>`).join("") + "</table>";
+    h += `<p>증권사 리포트 <b>${list.length}건</b> 정독.</p>`;
+    if (pick) h += `<p>오늘의 보고서 : <b>${esc(pick.name)}</b></p>`;
     if (pick) h += `<h2>🏅 오늘의 보고서 · ${esc(pick.name)}</h2><p><b>${metaLine(pick)}</b></p>` + noteBlock(pick);
     const rest = list.filter(r => r !== pick);
     if (rest.length) {
@@ -533,6 +531,9 @@ a.slot:hover{border-color:var(--accent)}
         h += "<hr>";
       });
     }
+    h += `<h2>📋 오늘 읽은 리포트</h2><table style="border-collapse:collapse"><tr>` +
+      ["기업","증권사","투자의견","UPSIDE"].map(c => `<th style="border:1px solid #ccc;padding:4px 10px;background:#f6f6f6">${c}</th>`).join("") + "</tr>" +
+      list.map(r => `<tr>${[(r === pick ? "🏅 " : "") + r.name, r.broker, opTxt(r), upTxt(r)].map(c => `<td style="border:1px solid #ccc;padding:4px 10px">${esc(c)}</td>`).join("")}</tr>`).join("") + "</table>";
     const tags = ["컨센서스", "증권사리포트", "주식공부", "오늘의보고서", ...list.map(r => r.name.replace(/\s+/g, ""))];
     h += `<p style="color:#888">${[...new Set(tags)].map(t => "#" + esc(t)).join(" ")}</p>`;
     return h;
