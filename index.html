@@ -95,6 +95,14 @@ a.slot:hover{border-color:var(--accent)}
 .archive .an{font-weight:700}
 .archive .ar{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
 .badge{font-size:12px}
+.wknav button.blogbtn,.blogbtn{width:auto;height:30px;padding:0 10px;font:inherit;font-size:13px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;margin-right:6px}
+.blogbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.blog{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.blog-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);font-size:13px;color:var(--muted)}
+.blog-paper{background:#fff;color:#222;padding:24px 28px;max-height:560px;overflow:auto;font-size:15px;line-height:1.75}
+.blog-paper h1{font-size:22px;margin:0 0 12px} .blog-paper h2{font-size:18px} .blog-paper h3{font-size:16px} .blog-paper h4{font-size:15px}
+.blog-paper table{border-collapse:collapse;margin:8px 0} .blog-paper a{color:#2a5bd7}
+@media (max-width:640px){.blogbtn .lbl{display:none}}
 @media (max-width:640px){.slots{grid-template-columns:repeat(2,minmax(0,1fr))}.hero .hname{font-size:20px}}
 </style>
 </head>
@@ -118,6 +126,7 @@ a.slot:hover{border-color:var(--accent)}
     <div class="picks-head">
       <h2 id="pk-title">🏆 금주의 보고서</h2>
       <div class="wknav">
+        <button id="blog-open" class="blogbtn">✎ 블로그 글 만들기</button>
         <button id="pk-prev" aria-label="이전 주">‹</button>
         <span id="pk-range"></span>
         <button id="pk-next" aria-label="다음 주">›</button>
@@ -126,6 +135,13 @@ a.slot:hover{border-color:var(--accent)}
     <div id="pk-hero"></div>
     <div class="slots" id="pk-slots"></div>
     <div class="archive" id="pk-archive" hidden></div>
+    <div class="blog" id="blog" hidden>
+      <div class="blog-bar">
+        <span>네이버 블로그용 초안 · 복사해서 글쓰기 화면에 붙여넣으세요</span>
+        <span><button id="blog-copy" class="blogbtn primary">복사</button> <button id="blog-close" class="blogbtn">닫기</button></span>
+      </div>
+      <div class="blog-paper" id="blog-paper"></div>
+    </div>
   </section>
 
   <section class="panel" aria-labelledby="wk-title">
@@ -443,8 +459,63 @@ a.slot:hover{border-color:var(--accent)}
       });
     }
   }
-  document.getElementById("pk-prev").addEventListener("click", () => { pkWeek = addDays(pkWeek, -7); renderPicks(); });
-  document.getElementById("pk-next").addEventListener("click", () => { pkWeek = addDays(pkWeek, 7); renderPicks(); });
+  // ── 블로그 글 초안 ──
+  const NOTES = window.NOTES || {};
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const opTxt = r => r.ops.map(o => OP[o] || o).join(", ");
+  const upTxt = r => typeof r.u === "number" ? (r.u > 0 ? "+" : "") + r.u + "%" : "";
+  function metaLine(r){ return [r.broker, opTxt(r), upTxt(r) && "UPSIDE " + upTxt(r)].filter(Boolean).map(esc).join(" · "); }
+  function noteBlock(r){
+    const why = r.why ? `<blockquote style="border-left:3px solid #f0b429;margin:8px 0;padding:2px 0 2px 12px;color:#555">선정 이유: ${esc(r.why)}</blockquote>` : "";
+    const body = NOTES[r.id];
+    return why + (body ? body : `<p style="color:#999">(노션 본문은 다음 동기화 때 들어가요)</p>`);
+  }
+  function buildBlog(){
+    const mon = pkWeek, sun = addDays(mon, 6);
+    const keys = new Set([0,1,2,3,4,5,6].map(i => ymd(addDays(mon, i))));
+    const inWeek = rows.filter(r => keys.has(r.d));
+    const weekly = inWeek.find(r => r.pick === 2);
+    const dailies = inWeek.filter(r => r.pick >= 1).sort((a, b) => a.d.localeCompare(b.d));
+    const nth = Math.ceil(mon.getDate() / 7);
+    const title = `${mon.getMonth()+1}월 ${nth}주차 컨센서스 노트` + (weekly ? ` | 금주의 보고서: ${weekly.name}` : "");
+    const dayOf = r => DAYS[toDate(r.d).getDay()];
+    let h = `<h1>${esc(title)}</h1>`;
+    h += `<p>이번 주(${md(mon)}~${md(sun)})에는 증권사 리포트 <b>${inWeek.length}건</b>을 읽었어요. 매일 하나씩 고른 '오늘의 보고서'${weekly ? "와 그중 가장 인상 깊었던 '금주의 보고서'" : ""}를 정리합니다.</p>`;
+    if (dailies.length) {
+      h += `<h2>📌 이번 주 오늘의 보고서</h2><table style="border-collapse:collapse"><tr>` +
+        ["요일","기업","증권사","투자의견","UPSIDE"].map(c => `<th style="border:1px solid #ccc;padding:4px 10px;background:#f6f6f6">${c}</th>`).join("") + "</tr>" +
+        dailies.map(r => `<tr>${[dayOf(r) + " " + md(toDate(r.d)), (r.pick === 2 ? "🏆 " : "") + r.name, r.broker, opTxt(r), upTxt(r)].map(c => `<td style="border:1px solid #ccc;padding:4px 10px">${esc(c)}</td>`).join("")}</tr>`).join("") + "</table>";
+    }
+    if (weekly) h += `<h2>🏆 금주의 보고서 · ${esc(weekly.name)}</h2><p><b>${metaLine(weekly)}</b> · ${esc(dateLabel(weekly.d))}</p>` + noteBlock(weekly);
+    dailies.filter(r => r !== weekly).forEach(r => {
+      h += `<h3>${esc(dayOf(r) + " " + md(toDate(r.d)))} · ${esc(r.name)}</h3><p><b>${metaLine(r)}</b></p>` + noteBlock(r);
+    });
+    if (!dailies.length) h += `<p style="color:#999">(이번 주에 선정한 보고서가 아직 없어요. 노션에서 '선정'을 골라 주세요.)</p>`;
+    const tags = ["컨센서스", "증권사리포트", "주식공부", "금주의보고서", ...dailies.map(r => r.name.replace(/\s+/g, ""))];
+    h += `<p style="color:#888">${[...new Set(tags)].map(t => "#" + esc(t)).join(" ")}</p>`;
+    return h;
+  }
+  const $blog = document.getElementById("blog"), $paper = document.getElementById("blog-paper"), $copy = document.getElementById("blog-copy");
+  document.getElementById("blog-open").addEventListener("click", () => { $paper.innerHTML = buildBlog(); $blog.hidden = false; $blog.scrollIntoView({behavior: "smooth", block: "nearest"}); });
+  document.getElementById("blog-close").addEventListener("click", () => { $blog.hidden = true; });
+  $copy.addEventListener("click", async () => {
+    const htmlStr = $paper.innerHTML, text = $paper.innerText;
+    let ok = false;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({"text/html": new Blob([htmlStr], {type: "text/html"}), "text/plain": new Blob([text], {type: "text/plain"})})]);
+      ok = true;
+    } catch (e) {
+      const range = document.createRange(); range.selectNodeContents($paper);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      try { ok = document.execCommand("copy"); } catch (_) {}
+      sel.removeAllRanges();
+    }
+    $copy.textContent = ok ? "복사됨 ✓" : "직접 선택해서 복사해 주세요";
+    setTimeout(() => { $copy.textContent = "복사"; }, 2000);
+  });
+
+  document.getElementById("pk-prev").addEventListener("click", () => { pkWeek = addDays(pkWeek, -7); renderPicks(); if (!$blog.hidden) $paper.innerHTML = buildBlog(); });
+  document.getElementById("pk-next").addEventListener("click", () => { pkWeek = addDays(pkWeek, 7); renderPicks(); if (!$blog.hidden) $paper.innerHTML = buildBlog(); });
   renderPicks();
 
   // 상단 요약
