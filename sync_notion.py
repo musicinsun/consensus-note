@@ -265,11 +265,18 @@ def main():
     rows = [row(pg) for pg in pages]
     rows.sort(key=lambda r: r[1] or "", reverse=True)  # 날짜 내림차순 (같은 날은 최근 생성 순)
 
+    # ONLY_DATES="261117,261118" 처럼 주면 그 날짜 리포트의 본문만 새로 읽음 (나머지는 지난번 것 유지)
+    only = {d.strip() for d in os.environ.get("ONLY_DATES", "").split(",") if d.strip()}
+    date_of = {r[0]: r[1] for r in rows}
     old, notes, fetched = previous_notes(), {}, 0
     for pg in pages:
         pid, edited = pg["id"].replace("-", ""), pg["last_edited_time"]
         if pid in old and old[pid].get("t") == edited:
             notes[pid] = old[pid]
+            continue
+        if only and date_of.get(pid) not in only:
+            if pid in old:
+                notes[pid] = old[pid]
             continue
         try:
             notes[pid] = {"t": edited, "h": blocks_html(pid)}
