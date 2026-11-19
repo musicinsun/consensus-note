@@ -334,11 +334,19 @@ def main():
     # ONLY_DATES="261117,261118" 처럼 주면 그 날짜 리포트의 본문만 새로 읽음 (나머지는 지난번 것 유지)
     only = {d.strip() for d in os.environ.get("ONLY_DATES", "").split(",") if d.strip()}
     date_of = {r[0]: r[1] for r in rows}
-    old, notes, fetched = previous_notes(), {}, 0
+    old, notes, fetched, left = previous_notes(), {}, 0, 0
+    # 한 번에 너무 오래 돌면 GitHub가 중간에 끊어서 아무것도 저장되지 않음 →
+    # 15분이 지나면 거기까지만 저장하고, 나머지는 다음 동기화가 이어서 받음 (최근 리포트부터 받음)
+    deadline = time.monotonic() + float(os.environ.get("TIME_BUDGET_MIN", "15")) * 60
     for pg in pages:
         pid, edited = pg["id"].replace("-", ""), pg["last_edited_time"]
         if pid in old and old[pid].get("t") == edited:
             notes[pid] = old[pid]
+            continue
+        if time.monotonic() > deadline:
+            left += 1
+            if pid in old:
+                notes[pid] = old[pid]
             continue
         if only and date_of.get(pid) not in only:
             if pid in old:
@@ -376,7 +384,8 @@ def main():
         encoding="utf-8",
     )
     added = sum(len(v) for v in STORE.added.values())
-    print(f"{len(rows)}건 저장, 본문 {len(notes)}건 (이번에 새로 읽음 {fetched}건), 새 이미지 {added}개 → {OUT.name}")
+    print(f"{len(rows)}건 저장, 본문 {len(notes)}건 (이번에 새로 읽음 {fetched}건), 새 이미지 {added}개 → {OUT.name}"
+          + (f" · 시간이 부족해 {left}건은 다음 동기화에서 이어 받음" if left else ""))
 
 
 if __name__ == "__main__":
