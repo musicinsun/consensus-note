@@ -1,7 +1,7 @@
 // LME 알루미늄 (출처: westmetall.com). fetch_lme.py가 자동 생성합니다.
 // 행: [날짜, 현물가(Cash-Settlement, USD/t), 3개월물(USD/t), 재고(t)]
 window.LME = {
-updated: "2026-11-19",
+updated: "2026-11-20",
 rows: [
 ["2024-01-02", 2336.5, 2379.0, 566375],
 ["2024-01-03", 2255.5, 2302.0, 565175],
