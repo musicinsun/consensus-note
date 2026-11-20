@@ -292,9 +292,9 @@ def text(prop):
 
 def row(page):
     p = page["properties"]
-    # '날짜별 묶음'은 선택(select)이든 다중 선택(multi_select)이든 읽음. 여러 개면 가장 이른 날짜
+    # '날짜별 묶음'은 선택(select)이든 다중 선택(multi_select)이든 읽음. 여러 개면 가장 마지막(최근) 날짜
     dp = p.get("날짜별 묶음") or {}
-    opts = [dp["select"]] if dp.get("select") else sorted(dp.get("multi_select") or [], key=lambda o: o["name"])
+    opts = [dp["select"]] if dp.get("select") else sorted(dp.get("multi_select") or [], key=lambda o: o["name"], reverse=True)
     date = opts[0] if opts else None
     study = (p.get("추가 공부") or {}).get("select")
     pick = ((p.get("선정") or {}).get("select") or {}).get("name")
