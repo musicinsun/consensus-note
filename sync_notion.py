@@ -292,7 +292,10 @@ def text(prop):
 
 def row(page):
     p = page["properties"]
-    date = (p.get("날짜별 묶음") or {}).get("select")
+    # '날짜별 묶음'은 선택(select)이든 다중 선택(multi_select)이든 읽음. 여러 개면 가장 이른 날짜
+    dp = p.get("날짜별 묶음") or {}
+    opts = [dp["select"]] if dp.get("select") else sorted(dp.get("multi_select") or [], key=lambda o: o["name"])
+    date = opts[0] if opts else None
     study = (p.get("추가 공부") or {}).get("select")
     pick = ((p.get("선정") or {}).get("select") or {}).get("name")
     ops = [OP_CODES.get(o["name"], o["name"]) for o in (p.get("투자 의견") or {}).get("multi_select", [])]

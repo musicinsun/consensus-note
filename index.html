@@ -12,6 +12,20 @@ h1{margin:0;font-size:26px;letter-spacing:-.02em}
 .sub{margin:6px 0 0;color:var(--muted);font-size:14px}
 .stats{display:flex;gap:20px;color:var(--muted);font-size:13px}
 .stats b{display:block;color:var(--text);font-size:20px;font-variant-numeric:tabular-nums}
+.head-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.syncbtn{font:inherit;font-size:13px;height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap}
+.syncbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.syncbtn:disabled{opacity:.5;cursor:default}
+.sync-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow);font-size:13px}
+.sync-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sync-row input{font:inherit;font-size:14px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:150px;max-width:100%}
+.sync-row input[type=password]{width:280px}
+.sync-hint{color:var(--muted)}
+.sync-msg{margin:8px 0 0;min-height:1em;color:var(--muted)}
+.sync-msg.ok{color:var(--star)} .sync-msg.err{color:var(--up)}
+.sync-setup{margin-top:8px;color:var(--muted)} .sync-setup summary{cursor:pointer;width:max-content;max-width:100%}
+.sync-setup ol{margin:8px 0;padding-left:20px;line-height:1.8} .sync-setup a,.sync-panel a{color:var(--accent)}
+.linkbtn{font:inherit;border:0;background:none;color:var(--accent);cursor:pointer;padding:0}
 .bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:8px}
 .bar input,.bar select{font:inherit;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
 .bar input:focus,.bar select:focus{border-color:var(--accent)}
@@ -121,8 +135,31 @@ a.slot:hover{border-color:var(--accent)}
       <h1>컨센서스 노트</h1>
       <p class="sub">카드를 누르면 노션 페이지가 열려요.</p>
     </div>
-    <div class="stats" id="stats"></div>
+    <div class="head-right">
+      <div class="stats" id="stats"></div>
+      <button class="syncbtn" id="sync-open">⟳ 노션 동기화</button>
+    </div>
   </header>
+
+  <section class="sync-panel" id="sync-panel" hidden>
+    <div class="sync-row">
+      <label>날짜 <input id="sync-date" inputmode="numeric" placeholder="261120" aria-label="동기화할 날짜"></label>
+      <button class="syncbtn primary" id="sync-run">동기화 실행</button>
+      <span class="sync-hint">비우면 전체 · 여러 날은 261119,261120</span>
+    </div>
+    <p class="sync-msg" id="sync-msg" role="status"></p>
+    <div id="sync-oneclick" hidden><span class="sync-hint">원클릭 모드 켜짐 (이 브라우저) · <button class="linkbtn" id="sync-forget">토큰 지우기</button> · <a id="sync-actions" target="_blank" rel="noopener">실행 기록 보기</a></span></div>
+    <details id="sync-setup" class="sync-setup">
+      <summary>버튼 한 번으로 바로 동기화되게 하기 (처음 한 번 설정)</summary>
+      <ol>
+        <li><a id="sync-newtoken" target="_blank" rel="noopener">GitHub 토큰 만들기</a> → 이름 <code>consensus-sync</code>, 만료 원하는 대로</li>
+        <li>저장소 접근: <b>저장소만 선택</b> → <code>consensus-note</code></li>
+        <li>권한 추가 → <b>Actions</b> → <b>읽기 및 쓰기</b> (다른 권한은 필요 없어요)</li>
+        <li>만든 토큰을 아래에 붙여넣고 저장. 이 브라우저에만 저장되고 사이트 코드나 GitHub에는 올라가지 않아요.</li>
+      </ol>
+      <div class="sync-row"><input id="sync-token" type="password" placeholder="github_pat_…" autocomplete="off" aria-label="GitHub 토큰"><button class="syncbtn" id="sync-save">저장</button></div>
+    </details>
+  </section>
 
   <section class="picks" aria-labelledby="pk-title">
     <div class="picks-head">
@@ -181,7 +218,9 @@ a.slot:hover{border-color:var(--accent)}
 </div>
 </div>
 
-<script src="data.js"></script>
+<!-- 브라우저가 옛 데이터를 들고 있지 않도록 매번 새로 받음 -->
+<script>document.write('<script src="data.js?v=' + Date.now() + '"><\/script>');</script>
+<script src="sync-button.js"></script>
 <script>
 (function(){
   const OP = {C:"CONVICTION BUY",B:"BUY",H:"HOLD",S:"SELL",N:"NR",J:"수주 코멘트"};
