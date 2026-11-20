@@ -1,7 +1,7 @@
 // 노션 '컨센서스 프로젝트' 데이터 스냅샷. sync_notion.py가 자동 생성합니다.
 // 행: [ID, 날짜, 기업명, 증권사, 투자의견, UPSIDE, 추가공부, 선정(1=오늘의 2=금주의), 선정 이유]
 window.CONSENSUS = {
-updated: "2026-11-19",
+updated: "2026-11-20",
 rows: [
 ["41d4d3d8697c80b6a350c55d9441fe32", "261119", "엔터산업", "SK, 상상인", null, null, null, null, null],
 ["41d4d3d8697c800abb11cc66eb1f6776", "261119", "게임산업", "LS", null, null, null, null, null],
