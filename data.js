@@ -1,7 +1,7 @@
 // 노션 '컨센서스 프로젝트' 데이터 스냅샷. sync_notion.py가 자동 생성합니다.
 // 행: [ID, 날짜, 기업명, 증권사, 투자의견, UPSIDE, 추가공부, 선정(1=오늘의 2=금주의), 선정 이유]
 window.CONSENSUS = {
-updated: "2026-11-20",
+updated: "2026-11-21",
 rows: [
 ["41e4d3d8697c817d825bdea98bf97e9c", "261120", "시황·산업 리포트 7건 요약", null, null, null, null, null, null],
 ["41e4d3d8697c8104adfad127969fe19e", "261120", "리노공업", "키움", "B", 81.6, null, null, null],
