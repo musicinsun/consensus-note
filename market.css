@@ -37,7 +37,9 @@
 .outlook-table th:first-child{width:19%}
 .outlook-table .outlook-muted{color:var(--muted);font-weight:400}
 .outlook-table .outlook-value{font-weight:700;font-size:18px}
-.outlook-table small a{font-size:inherit}
+.outlook-trends{margin:14px 0 20px}
+.outlook-trends .market-card{padding:16px}
+#outlook{scroll-margin-top:16px}
 .market-up{color:var(--up)}
 .market-down{color:var(--down)}
 .market select,.market button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit;font-size:13px;max-width:100%}
@@ -50,6 +52,8 @@
 .market-chart svg{display:block;width:100%;overflow:hidden}
 .market-chart svg text{font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
 .market-chart .guide{stroke:var(--line)}
+.market-chart .guide-zero{stroke:var(--muted);stroke-dasharray:4 4}
+.market-chart svg .plot-value{fill:var(--text);font-weight:600}
 .chart-key{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:4px 0}
 .chart-key span::before{content:"";display:inline-block;vertical-align:middle;width:10px;height:3px;margin-right:5px;background:var(--series)}
 .chart-empty{display:grid;place-items:center;min-height:300px;color:var(--muted);text-align:center;margin:0;line-height:1.5;font-size:14px;padding:16px}

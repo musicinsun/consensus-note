@@ -6,9 +6,9 @@
 <title>낸드·GPU 가격 | 시장 리서치</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="market.css?v=3">
+<link rel="stylesheet" href="market.css?v=4">
 <script src="market-data.js" defer></script>
-<script src="market.js?v=3" defer></script>
+<script src="market.js?v=4" defer></script>
 </head>
 <body>
 <div class="app">
@@ -21,7 +21,7 @@
 <main class="wrap market">
   <header class="market-header">
     <h1>낸드·GPU 가격</h1>
-    <div class="market-jump"><a href="#nand">낸드 가격표</a><a href="#gpu">GPU 가격표</a></div>
+    <div class="market-jump"><a href="#nand">낸드 가격표</a><a href="#outlook">계약가·전망</a><a href="#gpu">GPU 가격표</a></div>
   </header>
 
   <dl class="market-kpis" aria-label="최근 가격">
@@ -77,15 +77,16 @@
       <div class="card-head">
         <div><h2 id="nand-title">낸드 현물·계약 가격표</h2><p id="nand-status" class="market-meta" role="status"></p></div>
         <div class="source-links">
-          <a href="https://www.trendforce.com/price/flash/wafer_spot">현물가 원문</a>
-          <a href="https://www.trendforce.com/price/flash/wafer_contract">계약가 원문</a>
+          <a href="https://www.chinaflashmarket.com/price/nandflash">CFM 현물가</a>
+          <a href="https://www.trendforce.com/price/flash/wafer_spot">TrendForce 현물가</a>
+          <a href="https://www.trendforce.com/price/flash/wafer_contract">TrendForce 계약가</a>
         </div>
       </div>
       <table class="market-table" aria-label="낸드 현물 및 계약 가격">
         <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
         <tbody id="nand-table"></tbody>
       </table>
-      <p class="market-note" id="nand-feed-note">TrendForce 원문에서 공개 현물가를 볼 수 있습니다. 이 사이트의 자동 갱신에는 공개 게시가 허용된 시세 데이터가 필요합니다.</p>
+      <p class="market-note" id="nand-feed-note">CFM과 TrendForce 원문에서 현물가를 비교할 수 있습니다. 이 사이트의 자동 갱신에는 공개 게시가 허용된 시세 데이터가 필요합니다.</p>
       <details class="market-import">
         <summary>내 낸드 가격 파일 불러오기</summary>
         <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
@@ -98,35 +99,65 @@
         <p id="import-status" aria-live="polite"></p>
       </details>
     </div>
-    <aside class="market-card outlook" aria-labelledby="outlook-title">
+    <section class="market-card outlook" id="outlook" aria-labelledby="outlook-title">
       <div class="card-head">
-        <div>
-          <h2 id="outlook-title">TrendForce 낸드 계약가 전망 수정 이력</h2>
-          <p class="market-meta">전체 낸드 플래시 · 전분기 대비</p>
+        <h2 id="outlook-title">낸드 계약가와 전망</h2>
+      </div>
+      <div class="market-trends outlook-trends">
+        <div class="market-card">
+          <h3>512Gb TLC 웨이퍼 계약가</h3>
+          <p class="market-meta">분기 말 월별 가격 · USD · 공개 IR 자료</p>
+          <div class="market-chart" id="contract-chart"></div>
+          <p class="market-note">2026년 9월까지 표시. <a href="https://file.teamgroupinc.com/about/corporate-information-session/2026/2026-q4-tw.pdf#page=18">TEAMGROUP 11/2 IR 18쪽</a> · 원자료 TrendForce</p>
+        </div>
+        <div class="market-card">
+          <h3>TrendForce 계약가 전망 범위</h3>
+          <p class="market-meta">전체 낸드 플래시 · 전분기 대비 (%)</p>
+          <div class="market-chart" id="outlook-chart"></div>
         </div>
       </div>
-      <table class="market-table outlook-table" aria-labelledby="outlook-title">
+      <h3 id="forecast-history-title">발표별 전망 이력</h3>
+      <table class="market-table outlook-table" aria-labelledby="forecast-history-title">
         <thead>
-          <tr><th scope="col">분기</th><th scope="col">이전 전망</th><th scope="col">최근 전망</th><th scope="col">수정 폭</th></tr>
+          <tr><th scope="col">대상 분기</th><th scope="col">발표일</th><th scope="col">전망 범위</th><th scope="col">같은 분기 수정 폭</th></tr>
         </thead>
-        <tbody>
-          <tr>
-            <th scope="row">4Q26</th>
-            <td>+15~20%<small><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html"><time datetime="2026-09-30">9/30 발표</time></a></small></td>
-            <td class="outlook-value">+8~13%<small><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">11/19 발표</time></a></small></td>
-            <td class="market-down">7%p 하향<small>범위 상·하단</small></td>
+        <tbody id="outlook-history">
+          <tr data-quarter="2027-03-31" data-low="-5" data-high="0">
+            <th scope="row">1Q27</th><td><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">26.11.19</time></a></td>
+            <td class="outlook-value">−5~0%</td><td class="outlook-muted">이전 수치 미확인</td>
           </tr>
-          <tr>
-            <th scope="row">1Q27</th>
-            <td class="outlook-muted">미확인<small>이전 공개 수치</small></td>
-            <td class="outlook-value">−5~0%<small><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">11/19 발표</time></a></small></td>
-            <td>하락 전망</td>
+          <tr data-quarter="2026-12-31" data-low="8" data-high="13">
+            <th scope="row">4Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">26.11.19</time></a></td>
+            <td class="outlook-value">+8~13%</td><td class="market-down">7%p 하향</td>
+          </tr>
+          <tr data-quarter="2026-12-31" data-low="15" data-high="20">
+            <th scope="row">4Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html"><time datetime="2026-09-30">26.09.30</time></a></td>
+            <td class="outlook-value">+15~20%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-09-30" data-low="10" data-high="15">
+            <th scope="row">3Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260703-13134.html"><time datetime="2026-07-03">26.07.03</time></a></td>
+            <td class="outlook-value">+10~15%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-06-30" data-low="70" data-high="75">
+            <th scope="row">2Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260331-12995.html"><time datetime="2026-03-31">26.03.31</time></a></td>
+            <td class="outlook-value">+70~75%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-03-31" data-low="55" data-high="60">
+            <th scope="row">1Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260202-12911.html"><time datetime="2026-02-02">26.02.02</time></a></td>
+            <td class="outlook-value">+55~60%</td><td class="market-up">22%p 상향</td>
+          </tr>
+          <tr data-quarter="2026-03-31" data-low="33" data-high="38">
+            <th scope="row">1Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260105-12860.html"><time datetime="2026-01-05">26.01.05</time></a></td>
+            <td class="outlook-value">+33~38%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2025-12-31" data-low="5" data-high="10">
+            <th scope="row">4Q25</th><td><a href="https://www.trendforce.com/presscenter/news/20250925-12736.html"><time datetime="2025-09-25">25.09.25</time></a></td>
+            <td class="outlook-value">+5~10%</td><td class="outlook-muted">—</td>
           </tr>
         </tbody>
       </table>
-      <p class="market-note">TrendForce는 전체 계약가 하락 시작을 2Q27에서 1Q27로 한 분기 앞당겼습니다. 중국 클라우드 기업의 기업용 SSD 주문 축소와 공급 증가를 반영했습니다. <a href="https://www.trendforce.com/research/download/RP261118TU">11/18 시장 보고서</a></p>
-      <p class="market-note">TrendForce는 유통 재고 조정으로 최근 현물가가 20% 넘게 내렸다고 설명했습니다. <a href="https://www.trendforce.com/presscenter/news/20261119-13314.html">11/19 보도자료</a></p>
-    </aside>
+      <p class="market-note">11/19 전망은 중국 클라우드 기업의 SSD 주문 축소와 공급 증가를 반영했습니다. 전체 계약가 하락 예상 시점이 한 분기 앞당겨졌습니다. <a href="https://www.trendforce.com/research/download/RP261118TU">11/18 시장 보고서</a></p>
+    </section>
   </section>
 </main>
 </div>
