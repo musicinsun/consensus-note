@@ -74,12 +74,13 @@ details.tbl td{color:var(--text)}
     <section class="card"><h2>4. 스프레드: 6개월 전 − 1개월 전</h2><p>판매 기준가 − 매입 기준가 · 0 위면 시차가 유리 · USD/톤</p><div class="chart" id="c4"></div></section>
     <section class="card"><h2>5. 스프레드: 3개월 전 − 1개월 전</h2><p>USD/톤</p><div class="chart" id="c5"></div></section>
   </div>
+  <section class="card"><h2>6. 스프레드 vs 삼아알미늄 주가</h2><p>같은 날짜축 · 위: 삼아알미늄(006110) 종가(원) · 아래: 6M−1M, 3M−1M 스프레드(USD/톤) · 마우스를 올리면 같은 날 값을 함께 보여줘요</p><div class="chart" id="c6"></div></section>
 
   <section class="card">
     <details class="tbl"><summary>최근 20거래일 표로 보기</summary><div id="tbl"></div></details>
   </section>
 
-  <p class="note">출처: westmetall.com (LME 공식 가격을 재게시). 하루 4번(한국시간 오전 9시·오후 3시·오후 9시·새벽 3시) 새 데이터를 확인해요. 출처가 재고 집계 후 다음 날 게시해서 보통 1거래일 늦게 반영돼요. 스프레드의 "N개월 전 가격"은 그 날짜 이전 가장 가까운 거래일의 현물가예요.</p>
+  <p class="note">출처: westmetall.com (LME 공식 가격을 재게시), 삼아알미늄 주가는 네이버 금융(수정주가 종가). 하루 4번(한국시간 오전 9시·오후 3시·오후 9시·새벽 3시) 새 데이터를 확인해요. 출처가 재고 집계 후 다음 날 게시해서 보통 1거래일 늦게 반영돼요. 스프레드의 "N개월 전 가격"은 그 날짜 이전 가장 가까운 거래일의 현물가예요.</p>
 </div>
 </div>
 
@@ -109,6 +110,15 @@ details.tbl td{color:var(--text)}
     r.s61 = ok6 && p6 != null && p1 != null ? p6 - p1 : null;
     r.s31 = ok3 && p3 != null && p1 != null ? p3 - p1 : null;
   });
+  // 삼아알미늄 종가: 그 날짜(또는 직전 한국 거래일) 종가를 붙임
+  const STK = ((window.LME && window.LME.stock) || []).map(s => ({t: new Date(s[0] + "T00:00:00"), v: s[1]}));
+  (function(){
+    let j = -1;
+    rows.forEach(r => {
+      while (j + 1 < STK.length && STK[j + 1].t <= r.t) j++;
+      r.px = j >= 0 && (r.t - STK[j].t) / 864e5 <= 7 ? STK[j].v : null;
+    });
+  })();
 
   function niceTicks(lo, hi, n){
     if (lo === hi) { lo -= 1; hi += 1; }
@@ -185,6 +195,7 @@ details.tbl td{color:var(--text)}
   const P_STOCK = {key: "stock", color: "--s-stock", label: "재고", fmt: v => fmt0(v) + "t"};
   const P_S61 = {key: "s61", color: "--s-spread", label: "6M−1M", zero: true, fmt: v => "$" + fmtS(v)};
   const P_S31 = {key: "s31", color: "--s-spread2", label: "3M−1M", zero: true, fmt: v => "$" + fmtS(v)};
+  const P_PX = {key: "px", color: "--accent", label: "삼아알미늄", fmt: v => v == null ? "–" : Math.round(v).toLocaleString("ko-KR") + "원"};
 
   // KPI
   function kpis(){
@@ -217,6 +228,7 @@ details.tbl td{color:var(--text)}
     chart(document.getElementById("c3"), data, [P_PRICE, P_STOCK], 150);
     chart(document.getElementById("c4"), data, [P_S61], 200);
     chart(document.getElementById("c5"), data, [P_S31], 200);
+    chart(document.getElementById("c6"), data, [P_PX, P_S61, P_S31], 140);
   }
   document.querySelectorAll(".ranges button").forEach(b => b.addEventListener("click", () => {
     months = +b.dataset.m;
