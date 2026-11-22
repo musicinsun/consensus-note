@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>낸드·GPU 가격 | 시장 리서치</title>
+<title>반도체 가격 | 시장 리서치</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="market.css?v=6">
-<script src="market-data.js" defer></script>
-<script src="market.js?v=6" defer></script>
+<link rel="stylesheet" href="market.css?v=8">
+<script src="market-data.js?v=8" defer></script>
+<script src="market.js?v=8" defer></script>
 </head>
 <body>
 <div class="app">
@@ -16,12 +16,12 @@
   <div class="brand">시장 리서치</div>
   <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
   <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
-  <a href="market.html" aria-current="page">낸드·GPU 가격<small>계약가·렌탈가</small></a>
+  <a href="market.html" aria-current="page">반도체 가격<small>GPU 렌탈·메모리 시세</small></a>
 </nav>
 <main class="wrap market">
   <header class="market-header">
-    <h1>낸드·GPU 가격</h1>
-    <div class="market-jump"><a href="#gpu">GPU 렌탈가</a><a href="#correlation">주가 상관관계</a><a href="#outlook">낸드 계약가·전망</a></div>
+    <h1>반도체 가격</h1>
+    <div class="market-jump"><a href="#gpu">GPU 렌탈가</a><a href="#dram">DRAM 시세</a><a href="#outlook">낸드 계약가·전망</a></div>
   </header>
 
   <dl class="market-kpis" aria-label="최근 가격">
@@ -33,11 +33,14 @@
   <section id="gpu" class="market-section" aria-labelledby="gpu-trend-title">
     <div class="market-card">
       <div class="card-head">
-        <h2 id="gpu-trend-title">GPU 렌탈가 추이</h2>
+        <div>
+          <h2 id="gpu-trend-title">GPU 렌탈가 추이</h2>
+          <p class="market-meta" id="gpu-coverage" role="status"></p>
+        </div>
         <div class="chart-controls">
           <select id="gpu-model" aria-label="GPU 모델"></select>
           <select id="gpu-range" aria-label="가격 차트 기간">
-            <option value="30">30일</option><option value="90">90일</option><option value="0">전체</option>
+            <option value="0" selected>전체</option><option value="30">30일</option><option value="90">90일</option>
           </select>
         </div>
       </div>
@@ -61,34 +64,24 @@
     </div>
   </section>
 
-  <section id="correlation" class="market-section market-card" aria-labelledby="corr-title">
+  <section id="dram" class="market-section market-card" aria-labelledby="dram-title">
     <div class="card-head">
       <div>
-        <h2 id="corr-title">GPU 렌탈가와 주가 상관관계</h2>
-        <p class="market-meta" id="corr-period"></p>
+        <h2 id="dram-title">DRAM 현물가·계약가</h2>
+        <p class="market-meta">DDR4·DDR5 칩 현물가와 서버 메모리 계약 시세</p>
       </div>
-      <div class="chart-controls">
-        <select id="corr-frequency" aria-label="상관계수 비교 주기">
-          <option value="daily">일간 변화율</option><option value="weekly">주간 변화율</option>
-        </select>
-        <select id="corr-metric" aria-label="비교할 GPU 렌탈가">
-          <option value="p25">하위 25% 가격</option><option value="low">최저가</option>
-        </select>
+      <div class="source-links">
+        <a href="https://www.chinaflashmarket.com/price/ddr">CFM 칩 현물가</a>
+        <a href="https://www.chinaflashmarket.com/price/rdimmcontract">CFM 서버 메모리 계약 시세</a>
+        <a href="https://www.trendforce.com/price/dram/dram_spot">TrendForce 시세</a>
       </div>
     </div>
-    <table class="market-table corr-table" aria-labelledby="corr-title" aria-describedby="corr-method">
-      <thead><tr>
-        <th scope="col">GPU</th><th scope="col">엔비디아</th><th scope="col">브로드컴</th>
-        <th scope="col">삼성전자</th><th scope="col">SK하이닉스</th>
-      </tr></thead>
-      <tbody id="corr-body"></tbody>
-    </table>
-    <p id="corr-method" class="market-note">피어슨 상관계수. +1에 가까울수록 같은 방향, −1에 가까울수록 반대 방향입니다. 아래 작은 숫자는 비교에 쓰인 변화율 쌍의 수입니다. 가격 변화가 일정하면 ‘—’로 표시합니다.</p>
-    <details class="market-import">
-      <summary>계산 기준과 출처</summary>
-      <p>각 종목의 배당·분할 반영 수정종가와 장 마감 전 24시간 이내에 기록된 최신 GPU 렌탈가를 짝지었습니다. 일간은 연속 거래일, 주간은 연속된 주의 마지막 거래일 사이의 변화율을 비교했습니다. 어느 쪽이든 기록이 빠지거나 같은 렌탈가 기록을 재사용하게 되는 경우 비교에서 뺐습니다.</p>
-      <p>주가 출처 <a href="https://finance.yahoo.com/quote/NVDA/history/">NVDA</a> · <a href="https://finance.yahoo.com/quote/AVGO/history/">AVGO</a> · <a href="https://finance.yahoo.com/quote/005930.KS/history/">005930.KS</a> · <a href="https://finance.yahoo.com/quote/000660.KS/history/">000660.KS</a> · <a href="https://gpurentalprices.com/data">렌탈가 출처</a></p>
-    </details>
+    <div class="dram-reference">
+      <h3>DDR5·DDR4 칩 계약가</h3>
+      <p class="market-meta">공개 IR에 나온 기준월 계약가 · 2026년 9월까지</p>
+      <div class="market-chart" id="dram-chart"></div>
+      <p class="market-note">2026년 9월 DDR5 16Gb $48.00 · DDR4 8Gb $26.00. <a href="https://file.teamgroupinc.com/about/corporate-information-session/2026/2026-q4-tw.pdf#page=17">TEAMGROUP 11/2 IR 17쪽</a> · 원자료 TrendForce</p>
+    </div>
   </section>
 
   <section id="nand" class="market-section" aria-labelledby="outlook-title">
@@ -176,51 +169,5 @@
   </section>
 </main>
 </div>
-<script type="application/json" id="corr-data">
-{
-  "from": "2026-07-05",
-  "through": "2026-11-20",
-  "daily": {
-    "p25": {
-      "4090": [[0.08002,90],[0.0372,90],[0.06421,79],[0.10889,79]],
-      "5090": [[-0.01957,90],[-0.19017,90],[-0.19898,79],[-0.18723,79]],
-      "h100": [[-0.0168,90],[-0.02799,90],[-0.1006,79],[-0.0748,79]],
-      "h200": [[0.02841,90],[0.02507,90],[-0.22777,79],[-0.17903,79]],
-      "b200": [[-0.1271,90],[0.02798,90],[-0.06898,79],[-0.11531,79]],
-      "a100": [[0.06702,90],[-0.05103,90],[0.11015,79],[0.07555,79]],
-      "l40s": [[0.04991,90],[0.18947,90],[-0.01294,79],[0.05073,79]]
-    },
-    "low": {
-      "4090": [[0.14716,90],[0.03817,90],[0.21534,79],[0.25607,79]],
-      "5090": [[-0.07522,90],[-0.10822,90],[-0.14974,79],[-0.12735,79]],
-      "h100": [[-0.06063,90],[-0.06418,90],[0.11313,79],[0.08043,79]],
-      "h200": [[-0.07314,90],[-0.13679,90],[-0.14106,79],[-0.09208,79]],
-      "b200": [[-0.01954,90],[-0.0708,90],[-0.13983,79],[-0.08253,79]],
-      "a100": [[null,90],[null,90],[0.16182,79],[0.12909,79]],
-      "l40s": [[-0.37405,90],[-0.4152,90],[-0.05605,79],[-0.11002,79]]
-    }
-  },
-  "weekly": {
-    "p25": {
-      "4090": [[0.2699,16],[0.2497,16],[-0.04971,19],[0.16256,19]],
-      "5090": [[0.44399,16],[-0.16332,16],[-0.50998,19],[-0.54159,19]],
-      "h100": [[-0.12545,16],[0.07165,16],[-0.5247,19],[-0.45436,19]],
-      "h200": [[0.13015,16],[0.05638,16],[-0.40462,19],[-0.47969,19]],
-      "b200": [[-0.62727,16],[-0.35946,16],[-0.22897,19],[-0.24225,19]],
-      "a100": [[0.2434,16],[-0.01736,16],[0.25206,19],[0.2513,19]],
-      "l40s": [[0.06264,16],[0.67288,16],[0.38753,19],[0.31736,19]]
-    },
-    "low": {
-      "4090": [[-0.11826,16],[-0.07221,16],[0.00949,19],[0.03625,19]],
-      "5090": [[0.18282,16],[-0.03268,16],[-0.20135,19],[-0.24299,19]],
-      "h100": [[null,16],[null,16],[-0.04618,19],[-0.07283,19]],
-      "h200": [[-0.10524,16],[-0.05159,16],[-0.24989,19],[-0.26769,19]],
-      "b200": [[-0.13575,16],[-0.13264,16],[-0.256,19],[-0.24863,19]],
-      "a100": [[null,16],[null,16],[0.34867,19],[0.47093,19]],
-      "l40s": [[-0.53812,16],[0.58038,16],[0.38653,19],[0.43891,19]]
-    }
-  }
-}
-</script>
 </body>
 </html>
