@@ -5,7 +5,6 @@
   };
   // A list preserves the chosen order even for all-numeric model keys.
   const gpuModels = [...Object.entries(models), ["4090", "RTX 4090"], ["5090", "RTX 5090 (Blackwell)"]];
-  const labels = { spot: "현물", contract: "계약" };
   const day = 86400000;
   const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
   const axisNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -20,6 +19,7 @@
     ["2025-12-31", 12.16], ["2026-03-31", 23.69],
     ["2026-06-30", 25.76], ["2026-09-30", 26.43],
   ]);
+  const isContract = row => row.kind === "contract";
   const time = date => Date.parse(date + "T00:00:00Z");
   const iso = stamp => new Date(stamp).toISOString().slice(0, 10);
 
@@ -69,7 +69,7 @@
       return;
     }
     const width = Math.max(240, box.clientWidth);
-    const height = width < 420 ? 218 : 285;
+    const height = width < 420 ? 218 : (width >= 680 && options.daily ? 350 : 285);
     const padding = { top: 16, right: 12, bottom: 30, left: 50 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
@@ -104,6 +104,7 @@
       const px = options.quarters ? Math.min(width - 19, x(stamp)) : x(stamp);
       graph.append(svg("text", { x: px, y: height - 8, "text-anchor": anchor }, label));
     });
+    let hasGaps = false;
     for (const line of lines) {
       if (line.range) {
         const marks = [];
@@ -124,21 +125,31 @@
         graph.append(...marks);
         continue;
       }
-      let path = "", previous = null;
+      let path = "", gaps = "", previous = null;
       const dots = [];
       for (const point of points) {
         const value = point[line.key], stamp = time(point.date);
         if (Number.isFinite(value)) {
           const cx = x(stamp), cy = y(value);
-          path += (previous == null || (options.daily && stamp - previous > day) ? "M" : "L") + cx + "," + cy;
+          const coordinate = cx + "," + cy;
+          const hasGap = previous && options.daily && stamp - previous.stamp > day;
+          if (hasGap) gaps += "M" + previous.coordinate + "L" + coordinate;
+          path += (!previous || hasGap ? "M" : "L") + coordinate;
           const dot = svg("circle", { cx, cy, r: points.length > 100 ? 1.6 : 3, fill: line.color });
           dot.append(svg("title", {}, point.date + " · " + line.label + " " + priceText(value) + " " + unit));
           dots.push(dot);
           if (options.valueLabels) {
             dots.push(svg("text", { x: cx, y: cy - 9, "text-anchor": "middle", class: "plot-value" }, dollar.format(value)));
           }
-          previous = stamp;
-        } else previous = null;
+          previous = { stamp, coordinate };
+        } else if (!options.daily) {
+          previous = null;
+        }
+      }
+      if (gaps) {
+        hasGaps = true;
+        graph.append(svg("path", { d: gaps, fill: "none", stroke: line.color, "stroke-width": 1.5,
+          "stroke-dasharray": "4 5", "stroke-opacity": .65 }));
       }
       graph.append(svg("path", { d: path, fill: "none", stroke: line.color, "stroke-width": 2, "stroke-linejoin": "round" }), ...dots);
     }
@@ -149,7 +160,8 @@
       item.style.setProperty("--series", line.color);
       key.append(item);
     }
-    const caption = points.length === 1 ? "기록 1건 · 데이터가 쌓이면 추세선을 표시합니다." : unit;
+    const caption = points.length === 1 ? "기록 1건 · 데이터가 쌓이면 추세선을 표시합니다."
+      : unit + (hasGaps ? " · 점선 사이에는 가격 기록이 없습니다." : "");
     figure.append(key, graph, html("figcaption", caption));
     box.append(figure);
   }
@@ -181,6 +193,12 @@
       return { date, label: latest.label, price: contractReference.get(date),
         priorLow: prior?.low, priorHigh: prior?.high, low: latest.low, high: latest.high };
     });
+    const latestActual = quarters.findLast(point => Number.isFinite(point.price));
+    if (latestActual) {
+      const [year, month] = latestActual.date.split("-");
+      el("contract-value").textContent = dollar.format(latestActual.price);
+      el("contract-detail").textContent = year + "년 " + Number(month) + "월 · 공개 IR";
+    }
     chart(el("contract-chart"), quarters, [
       { key: "price", label: "분기 말 계약가", color: "var(--s-price)" },
     ], "USD", "공개 계약가 기록이 없습니다.", { quarters: true, valueLabels: true, ticks: [10, 15, 20, 25, 30] });
@@ -226,52 +244,37 @@
       groups.get(key).set(row.date, row);
     }
     return [...groups.values()].map(dates => [...dates.values()].sort((a, b) => a.date.localeCompare(b.date)))
-      .sort((a, b) => b[0].kind.localeCompare(a[0].kind) || a[0].item.localeCompare(b[0].item));
+      .sort((a, b) => a[0].item.localeCompare(b[0].item));
   }
 
   function drawNand() {
     const rows = state.series[Number(el("nand-series").value)] || [];
     chart(el("nand-chart"), rows, [
-      { key: "price", label: rows.length ? labels[rows[0].kind] + " · " + rows[0].item : "낸드 가격", color: "var(--s-price)" },
-    ], rows[0]?.unit || "", "시세 데이터가 연결되면 추이를 표시합니다. 공개 현물가는 아래 가격표의 원문 링크에서 볼 수 있습니다.");
+      { key: "price", label: rows[0]?.item || "낸드 계약가", color: "var(--s-price)" },
+    ], rows[0]?.unit || "", "계약가 기록이 없습니다.");
   }
 
   function renderNand() {
     const selection = el("nand-series"), oldLabel = selection.selectedOptions[0]?.textContent;
     const body = el("nand-table");
     body.replaceChildren();
-    state.series = mergeNand([...state.data.nand, ...state.local]);
-    for (const kind of Object.keys(labels)) {
-      const latest = state.series.map(rows => rows.at(-1)).filter(row => row.kind === kind)
-        .sort((a, b) => b.date.localeCompare(a.date))[0];
-      el(kind + "-value").textContent = latest ? priceText(latest.price) + " " + latest.unit : "—";
-      el(kind + "-detail").textContent = latest ? latest.item + " · " + latest.date
-        : state.data.nand.length ? "이 구분의 가격 기록 없음" : "시세 데이터 미연결";
-    }
+    const localContracts = state.local.filter(isContract);
+    state.series = mergeNand(state.data.nand.filter(isContract).concat(localContracts));
     selection.replaceChildren();
-    el("nand-reset").hidden = !state.local.length;
-    if (!state.series.length) {
-      const row = html("tr"), message = html("td", "연결된 현물·계약 가격 기록이 없습니다.");
-      message.colSpan = 4;
-      row.append(message);
-      body.append(row);
-      selection.add(new Option("품목 없음", ""));
-      selection.disabled = true;
-    } else {
-      selection.disabled = false;
-      state.series.forEach((rows, index) => {
-        const last = rows.at(-1), prior = rows.at(-2);
-        const name = labels[last.kind] + " · " + last.item + " (" + last.unit + ")";
-        selection.add(new Option(name, index, false, name === oldLabel));
-        const amount = html("td", priceText(last.price));
-        amount.append(html("small", last.unit));
-        insertRow(body, last.item, labels[last.kind], [
-          amount, changeCell(last.price, prior?.price), html("td", last.date),
-        ]);
-      });
-    }
-    el("nand-status").textContent = state.local.length ? "내 파일 포함" : "";
-    el("nand-feed-note").hidden = state.data.nand.length > 0;
+    el("nand-records").hidden = !state.series.length;
+    el("nand-reset").hidden = !localContracts.length;
+    if (!state.series.length) return;
+    state.series.forEach((rows, index) => {
+      const last = rows.at(-1), prior = rows.at(-2);
+      const name = last.item + " (" + last.unit + ")";
+      selection.add(new Option(name, index, false, name === oldLabel));
+      const amount = html("td", priceText(last.price));
+      amount.append(html("small", last.unit));
+      insertRow(body, last.item, "", [
+        amount, changeCell(last.price, prior?.price), html("td", last.date),
+      ]);
+    });
+    el("nand-status").textContent = localContracts.length ? "내 파일 포함" : "";
     drawNand();
   }
 
@@ -288,7 +291,7 @@
       const price = Number(amount), stamp = time(date);
       if (fields.length !== 5 || !/^\d{4}-\d{2}-\d{2}$/.test(date)
           || !Number.isFinite(stamp) || iso(stamp) !== date || stamp > Date.now() + day
-          || !Object.hasOwn(labels, kind) || !item || item.length > 100
+          || (kind !== "contract" && kind !== "spot") || !item || item.length > 100
           || !unit || unit.length > 30 || !Number.isFinite(price) || price <= 0) {
         throw new Error((index + 2) + "번째 줄의 날짜, 구분, 품목, 가격, 단위를 확인해 주세요.");
       }
@@ -301,11 +304,12 @@
     if (!file) return;
     try {
       if (file.size > 2_000_000) throw new Error("CSV 파일은 2MB 이하로 저장해 주세요.");
-      const rows = parseNandCsv(await file.text());
+      const rows = parseNandCsv(await file.text()).filter(isContract);
+      if (!rows.length) throw new Error("CSV에 계약가(contract) 행이 없습니다.");
       const merged = mergeNand([...state.local, ...rows]).flat();
       localStorage.setItem(localKey, JSON.stringify(merged));
       state.local = merged;
-      el("import-status").textContent = "가격 기록 " + rows.length + "개를 불러왔습니다.";
+      el("import-status").textContent = "계약가 기록 " + rows.length + "개를 불러왔습니다.";
     } catch (error) {
       el("import-status").textContent = error.message;
     } finally {
@@ -314,9 +318,10 @@
     }
   });
   el("nand-reset").addEventListener("click", () => {
-    state.local = [];
-    localStorage.removeItem(localKey);
-    el("import-status").textContent = "이 브라우저에 저장한 가격 기록을 지웠습니다.";
+    state.local = state.local.filter(row => !isContract(row));
+    if (state.local.length) localStorage.setItem(localKey, JSON.stringify(state.local));
+    else localStorage.removeItem(localKey);
+    el("import-status").textContent = "이 브라우저에 저장한 계약가 기록을 지웠습니다.";
     renderNand();
   });
   for (const [key, label] of gpuModels) el("gpu-model").add(new Option(label, key));
@@ -335,7 +340,7 @@
   let pending;
   window.addEventListener("resize", () => {
     clearTimeout(pending);
-    pending = setTimeout(() => { drawGpu(); drawNand(); drawOutlook(); }, 100);
+    pending = setTimeout(() => { drawGpu(); if (state.series.length) drawNand(); drawOutlook(); }, 100);
   });
 
   // Scheduled commits made by GITHUB_TOKEN need not trigger a Pages rebuild.

@@ -6,9 +6,9 @@
 <title>낸드·GPU 가격 | 시장 리서치</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="market.css?v=4">
+<link rel="stylesheet" href="market.css?v=5">
 <script src="market-data.js" defer></script>
-<script src="market.js?v=4" defer></script>
+<script src="market.js?v=5" defer></script>
 </head>
 <body>
 <div class="app">
@@ -16,30 +16,22 @@
   <div class="brand">시장 리서치</div>
   <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
   <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
-  <a href="market.html" aria-current="page">낸드·GPU 가격<small>현물·계약·렌탈</small></a>
+  <a href="market.html" aria-current="page">낸드·GPU 가격<small>계약가·렌탈가</small></a>
 </nav>
 <main class="wrap market">
   <header class="market-header">
     <h1>낸드·GPU 가격</h1>
-    <div class="market-jump"><a href="#nand">낸드 가격표</a><a href="#outlook">계약가·전망</a><a href="#gpu">GPU 가격표</a></div>
+    <div class="market-jump"><a href="#gpu">GPU 렌탈가</a><a href="#outlook">낸드 계약가·전망</a></div>
   </header>
 
   <dl class="market-kpis" aria-label="최근 가격">
-    <div class="market-card"><dt>낸드 현물가</dt><dd id="spot-value">—</dd><dd id="spot-detail" class="kpi-detail">시세 데이터 미연결</dd></div>
-    <div class="market-card"><dt>낸드 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail">시세 데이터 미연결</dd></div>
     <div class="market-card"><dt>H100 최저가</dt><dd id="h100-value">—</dd><dd id="h100-detail" class="kpi-detail"></dd></div>
     <div class="market-card"><dt>RTX 5090 최저가</dt><dd id="5090-value">—</dd><dd id="5090-detail" class="kpi-detail"></dd></div>
+    <div class="market-card"><dt>낸드 512Gb TLC 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail"></dd></div>
   </dl>
 
-  <div class="market-trends">
-    <section class="market-card" aria-labelledby="nand-trend-title">
-      <div class="card-head">
-        <h2 id="nand-trend-title">낸드 가격 추이</h2>
-        <select id="nand-series" aria-label="낸드 품목" disabled><option>품목 없음</option></select>
-      </div>
-      <div class="market-chart" id="nand-chart"></div>
-    </section>
-    <section class="market-card" aria-labelledby="gpu-trend-title">
+  <section id="gpu" class="market-section" aria-labelledby="gpu-trend-title">
+    <div class="market-card">
       <div class="card-head">
         <h2 id="gpu-trend-title">GPU 렌탈가 추이</h2>
         <div class="chart-controls">
@@ -50,10 +42,7 @@
         </div>
       </div>
       <div class="market-chart" id="gpu-chart"></div>
-    </section>
-  </div>
-
-  <section id="gpu" class="market-section" aria-labelledby="gpu-title">
+    </div>
     <div class="market-card">
       <div class="card-head">
         <div><h2 id="gpu-title">GPU 렌탈 가격표</h2><p class="market-meta">USD/GPU·시간 · UTC</p></div>
@@ -72,33 +61,7 @@
     </div>
   </section>
 
-  <section id="nand" class="market-section" aria-labelledby="nand-title">
-    <div class="market-card">
-      <div class="card-head">
-        <div><h2 id="nand-title">낸드 현물·계약 가격표</h2><p id="nand-status" class="market-meta" role="status"></p></div>
-        <div class="source-links">
-          <a href="https://www.chinaflashmarket.com/price/nandflash">CFM 현물가</a>
-          <a href="https://www.trendforce.com/price/flash/wafer_spot">TrendForce 현물가</a>
-          <a href="https://www.trendforce.com/price/flash/wafer_contract">TrendForce 계약가</a>
-        </div>
-      </div>
-      <table class="market-table" aria-label="낸드 현물 및 계약 가격">
-        <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
-        <tbody id="nand-table"></tbody>
-      </table>
-      <p class="market-note" id="nand-feed-note">CFM과 TrendForce 원문에서 현물가를 비교할 수 있습니다. 이 사이트의 자동 갱신에는 공개 게시가 허용된 시세 데이터가 필요합니다.</p>
-      <details class="market-import">
-        <summary>내 낸드 가격 파일 불러오기</summary>
-        <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
-        <code>date,kind,item,price,unit</code>
-        <p>날짜는 YYYY-MM-DD, 구분은 현물 spot 또는 계약 contract입니다.</p>
-        <div class="file-controls">
-          <input type="file" id="nand-file" accept=".csv,text/csv" aria-label="낸드 가격 CSV">
-          <button id="nand-reset" type="button" hidden>내 기록 지우기</button>
-        </div>
-        <p id="import-status" aria-live="polite"></p>
-      </details>
-    </div>
+  <section id="nand" class="market-section" aria-labelledby="outlook-title">
     <section class="market-card outlook" id="outlook" aria-labelledby="outlook-title">
       <div class="card-head">
         <h2 id="outlook-title">낸드 계약가와 전망</h2>
@@ -157,6 +120,28 @@
         </tbody>
       </table>
       <p class="market-note">11/19 전망은 중국 클라우드 기업의 SSD 주문 축소와 공급 증가를 반영했습니다. 전체 계약가 하락 예상 시점이 한 분기 앞당겨졌습니다. <a href="https://www.trendforce.com/research/download/RP261118TU">11/18 시장 보고서</a></p>
+      <div id="nand-records" hidden>
+        <div class="card-head">
+          <div><h3>추가 계약가 기록</h3><p id="nand-status" class="market-meta" role="status"></p></div>
+          <select id="nand-series" aria-label="낸드 계약가 품목"></select>
+        </div>
+        <div class="market-chart" id="nand-chart"></div>
+        <table class="market-table" aria-label="추가 낸드 계약가">
+          <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
+          <tbody id="nand-table"></tbody>
+        </table>
+      </div>
+      <details class="market-import">
+        <summary>내 낸드 계약가 파일 불러오기</summary>
+        <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
+        <code>date,kind,item,price,unit</code>
+        <p>날짜는 YYYY-MM-DD, 구분은 contract입니다.</p>
+        <div class="file-controls">
+          <input type="file" id="nand-file" accept=".csv,text/csv" aria-label="낸드 계약가 CSV">
+          <button id="nand-reset" type="button" hidden>내 계약가 기록 지우기</button>
+        </div>
+        <p id="import-status" aria-live="polite"></p>
+      </details>
     </section>
   </section>
 </main>
