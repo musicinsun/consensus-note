@@ -16,6 +16,10 @@ DATA = Path(__file__).with_name("market-data.js")
 PREFIX = "window.MARKET_PRICES = "
 GPU_FEED = "https://raw.githubusercontent.com/adriannutiu/gpu-rental-prices/main/data/"
 GPU_SNAPSHOTS = "https://api.github.com/repos/adriannutiu/gpu-rental-prices/contents/data/snapshots"
+GPU_ERRATA = "https://gpurentalprices.com/api/errata.json"
+GPU_REPOSITORY = "https://raw.githubusercontent.com/adriannutiu/gpu-rental-prices/"
+# The live mirror retains 90 snapshots. This revision preserves the first 90.
+GPU_EARLY_REF = "c4e232d024dffb3c0363a101d4609a9ed9f38bc0"
 KST = timezone(timedelta(hours=9))
 MODELS = {
     "h100": {"h100", "h100-sxm", "h100-pcie", "h100-nvl"},
@@ -48,7 +52,18 @@ def percentile(values, fraction):
     return values[lo] + (values[hi] - values[lo]) * (index - lo)
 
 
-def gpu_snapshot(data):
+def excluded_by_errata(offer, snapshot, corrections):
+    return any(
+        entry["from"] <= snapshot["date"] <= entry["to"]
+        and (entry["gpus"] == "*" or offer["gpu"] in entry["gpus"])
+        and ("kinds" not in entry or offer["kind"] in entry["kinds"])
+        and ("usd_hr" not in entry or offer["usd_hr"] == entry["usd_hr"])
+        and entry.get("snapshot_generated_at", snapshot["generated_at"]) == snapshot["generated_at"]
+        for entry in corrections
+    )
+
+
+def gpu_snapshot(data, corrections):
     day = date.fromisoformat(data["date"]).isoformat()
     stamp = datetime.fromisoformat(data["generated_at"]).isoformat(timespec="seconds")
     offers = data["offers"]
@@ -63,7 +78,8 @@ def gpu_snapshot(data):
                 or provider.startswith("vast-") or provider.startswith("vast.")
                 or offer.get("kind") not in ("on-demand", "secure")
                 or offer.get("availability") in ("out-of-stock", "waitlist")
-                or not isinstance(checked, str) or checked[:10] != day):
+                or not isinstance(checked, str) or checked[:10] != day
+                or excluded_by_errata(offer, data, corrections.get(provider, []))):
             continue
         samples[model][provider] = min(price, samples[model].get(provider, price))
     if not any(samples.values()):
@@ -78,18 +94,25 @@ def gpu_snapshot(data):
     return points
 
 
-def append_gpu(archive, source):
-    for model, point in gpu_snapshot(source).items():
+def append_gpu(archive, source, corrections):
+    for model, point in gpu_snapshot(source, corrections).items():
         archive["gpu"][model] = same_day(archive["gpu"].get(model, []), point)
 
 
-def backfill_gpu(archive):
-    listing = get_json(GPU_SNAPSHOTS)
-    names = sorted(item["name"] for item in listing
-                   if item.get("type") == "file" and item["name"].endswith(".json"))[-45:]
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        for snapshot in pool.map(lambda name: get_json(GPU_FEED + "snapshots/" + name), names):
-            append_gpu(archive, snapshot)
+def backfill_gpu(archive, corrections):
+    urls = {}
+    for ref in (GPU_EARLY_REF, "main"):
+        listing = get_json(GPU_SNAPSHOTS + "?ref=" + ref)
+        if not isinstance(listing, list) or not listing:
+            raise ValueError("Unexpected snapshot listing")
+        for item in listing:
+            name = item["name"]
+            if item["type"] == "file" and name.endswith(".json"):
+                day = date.fromisoformat(name.removesuffix(".json")).isoformat()
+                urls[day] = f"{GPU_REPOSITORY}{ref}/data/snapshots/{name}"
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for snapshot in pool.map(get_json, (urls[day] for day in sorted(urls))):
+            append_gpu(archive, snapshot, corrections)
 
 
 def same_day(history, snapshot):
@@ -152,9 +175,13 @@ def main():
     archive = read_archive(DATA)
     failures = []
     try:
+        corrections = {}
+        for entry in get_json(GPU_ERRATA)["entries"]:
+            if entry["action"] in {"exclude", "reclassify-spot", "reclassify-marketplace"}:
+                corrections.setdefault(entry["provider"], []).append(entry)
         if "--backfill" in sys.argv[1:]:
-            backfill_gpu(archive)
-        append_gpu(archive, get_json(GPU_FEED + "latest.json"))
+            backfill_gpu(archive, corrections)
+        append_gpu(archive, get_json(GPU_FEED + "latest.json"), corrections)
         print("GPU: " + ", ".join(f"{key} {rows[-1]['n']}" for key, rows in archive["gpu"].items()))
     except (ValueError, KeyError, OSError, TypeError, AttributeError) as error:
         failures.append("gpu")

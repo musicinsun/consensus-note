@@ -236,6 +236,30 @@
     drawGpu();
   }
 
+  const correlation = JSON.parse(el("corr-data").textContent);
+  el("corr-period").textContent = correlation.from + " ~ " + correlation.through + " 분석";
+
+  function renderCorrelation() {
+    const results = correlation[el("corr-frequency").value][el("corr-metric").value];
+    const body = el("corr-body");
+    body.replaceChildren();
+    for (const [key, label] of gpuModels) {
+      const cells = results[key].map(([coefficient, count]) => {
+        const rounded = coefficient == null ? null : Math.round(coefficient * 100) / 100;
+        const value = rounded == null ? "—" : (rounded > 0 ? "+" : "") + rounded.toFixed(2);
+        const cell = html("td", value);
+        if (coefficient) {
+          cell.className = coefficient > 0 ? "corr-positive" : "corr-negative";
+          cell.style.setProperty("--corr-strength", Math.round(Math.abs(coefficient) * 28) + "%");
+        }
+        if (coefficient == null) cell.title = "비교 구간의 렌탈가 변화율이 일정합니다.";
+        cell.append(html("small", count + "쌍"));
+        return cell;
+      });
+      insertRow(body, label.split(" (")[0], "", cells);
+    }
+  }
+
   function mergeNand(rows) {
     const groups = new Map();
     for (const row of rows) {
@@ -327,6 +351,8 @@
   for (const [key, label] of gpuModels) el("gpu-model").add(new Option(label, key));
   el("gpu-model").addEventListener("change", drawGpu);
   el("gpu-range").addEventListener("change", drawGpu);
+  el("corr-frequency").addEventListener("change", renderCorrelation);
+  el("corr-metric").addEventListener("change", renderCorrelation);
   el("nand-series").addEventListener("change", drawNand);
   try {
     const saved = JSON.parse(localStorage.getItem(localKey));
@@ -335,6 +361,7 @@
     state.local = [];
   }
   renderGpu();
+  renderCorrelation();
   renderNand();
   drawOutlook();
   let pending;
