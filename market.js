@@ -9,6 +9,7 @@
   const day = 86400000;
   const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
   const axisNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+  const dollar = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 4 });
   const priceText = value => Number.isFinite(value) ? number.format(value) : "—";
   const el = id => document.getElementById(id);
   const localKey = "consensus-note:nand-prices:v1";
@@ -31,10 +32,17 @@
     return node;
   }
 
+  function changeFrom(now, previous) {
+    return Number.isFinite(now) && previous > 0 ? Math.round((now / previous - 1) * 1000) / 10 : null;
+  }
+
+  function changeText(change) {
+    return (change > 0 ? "+" : "") + change.toFixed(1) + "%";
+  }
+
   function changeCell(now, previous) {
-    if (!Number.isFinite(now) || !(previous > 0)) return html("td", "—");
-    const change = Math.round((now / previous - 1) * 1000) / 10;
-    return html("td", (change > 0 ? "+" : "") + change.toFixed(1) + "%",
+    const change = changeFrom(now, previous);
+    return html("td", change == null ? "—" : changeText(change),
       change > 0 ? "market-up" : change < 0 ? "market-down" : "");
   }
 
@@ -55,8 +63,8 @@
       return;
     }
     const width = Math.max(240, box.clientWidth);
-    const height = width < 500 ? 192 : 225;
-    const padding = { top: 16, right: 12, bottom: 28, left: 48 };
+    const height = width < 420 ? 218 : 285;
+    const padding = { top: 16, right: 12, bottom: 30, left: 50 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
     const first = time(points[0].date), last = time(points.at(-1).date);
@@ -75,10 +83,11 @@
       graph.append(svg("text", { x: padding.left - 6, y: py + 4, "text-anchor": "end" },
         max - min < .04 ? priceText(value) : axisNumber.format(value)));
     }
-    const indices = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
-    indices.forEach((index, indexInList) => {
-      const anchor = indices.length === 1 ? "middle" : indexInList === 0 ? "start" : indexInList === indices.length - 1 ? "end" : "middle";
-      graph.append(svg("text", { x: x(time(points[index].date)), y: height - 8, "text-anchor": anchor }, points[index].date));
+    const tickCount = first === last ? 1 : Math.min(width < 420 ? 3 : 5, points.length, (last - first) / day + 1);
+    Array.from({ length: tickCount }, (_, i) => i).forEach(i => {
+      const stamp = tickCount === 1 ? first : first + Math.round((last - first) / day * i / (tickCount - 1)) * day;
+      const anchor = tickCount === 1 ? "middle" : i === 0 ? "start" : i === tickCount - 1 ? "end" : "middle";
+      graph.append(svg("text", { x: x(stamp), y: height - 8, "text-anchor": anchor }, iso(stamp)));
     });
     for (const line of lines) {
       let path = "", previous = null;
@@ -127,6 +136,12 @@
       const history = state.data.gpu[key] || [];
       const last = history.at(-1);
       const before = last && history.find(row => row.date === iso(time(last.date) - day));
+      if (key === "h100" || key === "5090") {
+        const change = changeFrom(last?.low, before?.low);
+        el(key + "-value").textContent = Number.isFinite(last?.low) ? dollar.format(last.low) : "—";
+        el(key + "-detail").textContent = change == null ? (last?.date || "가격 기록 없음")
+          : "전일 대비 " + changeText(change) + " · " + last.date;
+      }
       if (last) recent.push(last.date);
       insertRow(body, label, last?.date, [
         html("td", priceText(last?.low)), changeCell(last?.low, before?.low),
@@ -163,6 +178,12 @@
     const body = el("nand-table");
     body.replaceChildren();
     state.series = mergeNand([...state.data.nand, ...state.local]);
+    for (const kind of Object.keys(labels)) {
+      const latest = state.series.map(rows => rows.at(-1)).filter(row => row.kind === kind)
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      el(kind + "-value").textContent = latest ? priceText(latest.price) + " " + latest.unit : "—";
+      el(kind + "-detail").textContent = latest ? latest.item + " · " + latest.date : "가격 기록 없음";
+    }
     selection.replaceChildren();
     el("nand-reset").hidden = !state.local.length;
     if (!state.series.length) {
