@@ -6,9 +6,9 @@
 <title>낸드·GPU 가격 | 시장 리서치</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="market.css?v=2">
+<link rel="stylesheet" href="market.css?v=6">
 <script src="market-data.js" defer></script>
-<script src="market.js?v=2" defer></script>
+<script src="market.js?v=6" defer></script>
 </head>
 <body>
 <div class="app">
@@ -16,30 +16,22 @@
   <div class="brand">시장 리서치</div>
   <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
   <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
-  <a href="market.html" aria-current="page">낸드·GPU 가격<small>현물·계약·렌탈</small></a>
+  <a href="market.html" aria-current="page">낸드·GPU 가격<small>계약가·렌탈가</small></a>
 </nav>
 <main class="wrap market">
   <header class="market-header">
     <h1>낸드·GPU 가격</h1>
-    <div class="market-jump"><a href="#nand">낸드 가격표</a><a href="#gpu">GPU 가격표</a></div>
+    <div class="market-jump"><a href="#gpu">GPU 렌탈가</a><a href="#correlation">주가 상관관계</a><a href="#outlook">낸드 계약가·전망</a></div>
   </header>
 
   <dl class="market-kpis" aria-label="최근 가격">
-    <div class="market-card"><dt>낸드 현물가</dt><dd id="spot-value">—</dd><dd id="spot-detail" class="kpi-detail">가격 기록 없음</dd></div>
-    <div class="market-card"><dt>낸드 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail">가격 기록 없음</dd></div>
     <div class="market-card"><dt>H100 최저가</dt><dd id="h100-value">—</dd><dd id="h100-detail" class="kpi-detail"></dd></div>
     <div class="market-card"><dt>RTX 5090 최저가</dt><dd id="5090-value">—</dd><dd id="5090-detail" class="kpi-detail"></dd></div>
+    <div class="market-card"><dt>낸드 512Gb TLC 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail"></dd></div>
   </dl>
 
-  <div class="market-trends">
-    <section class="market-card" aria-labelledby="nand-trend-title">
-      <div class="card-head">
-        <h2 id="nand-trend-title">낸드 가격 추이</h2>
-        <select id="nand-series" aria-label="낸드 품목" disabled><option>품목 없음</option></select>
-      </div>
-      <div class="market-chart" id="nand-chart"></div>
-    </section>
-    <section class="market-card" aria-labelledby="gpu-trend-title">
+  <section id="gpu" class="market-section" aria-labelledby="gpu-trend-title">
+    <div class="market-card">
       <div class="card-head">
         <h2 id="gpu-trend-title">GPU 렌탈가 추이</h2>
         <div class="chart-controls">
@@ -50,10 +42,7 @@
         </div>
       </div>
       <div class="market-chart" id="gpu-chart"></div>
-    </section>
-  </div>
-
-  <section id="gpu" class="market-section" aria-labelledby="gpu-title">
+    </div>
     <div class="market-card">
       <div class="card-head">
         <div><h2 id="gpu-title">GPU 렌탈 가격표</h2><p class="market-meta">USD/GPU·시간 · UTC</p></div>
@@ -68,48 +57,170 @@
       </table>
       <p class="market-note" id="gpu-status" role="status"></p>
       <p class="market-note">당일 확인된 온디맨드 요금 중 공급자별 최저가를 집계합니다. 샘플 수는 공급자 수입니다.</p>
-      <p class="market-note">GPU rental price data by <a href="https://gpurentalprices.com">gpurentalprices.com</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. 모델별로 재집계했습니다.</p>
+      <p class="market-note">GPU rental price data by <a href="https://gpurentalprices.com">gpurentalprices.com</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. 공개 정정을 적용해 모델별로 재집계했습니다.</p>
     </div>
   </section>
 
-  <section id="nand" class="market-section" aria-labelledby="nand-title">
-    <div class="market-card">
+  <section id="correlation" class="market-section market-card" aria-labelledby="corr-title">
+    <div class="card-head">
+      <div>
+        <h2 id="corr-title">GPU 렌탈가와 주가 상관관계</h2>
+        <p class="market-meta" id="corr-period"></p>
+      </div>
+      <div class="chart-controls">
+        <select id="corr-frequency" aria-label="상관계수 비교 주기">
+          <option value="daily">일간 변화율</option><option value="weekly">주간 변화율</option>
+        </select>
+        <select id="corr-metric" aria-label="비교할 GPU 렌탈가">
+          <option value="p25">하위 25% 가격</option><option value="low">최저가</option>
+        </select>
+      </div>
+    </div>
+    <table class="market-table corr-table" aria-labelledby="corr-title" aria-describedby="corr-method">
+      <thead><tr>
+        <th scope="col">GPU</th><th scope="col">엔비디아</th><th scope="col">브로드컴</th>
+        <th scope="col">삼성전자</th><th scope="col">SK하이닉스</th>
+      </tr></thead>
+      <tbody id="corr-body"></tbody>
+    </table>
+    <p id="corr-method" class="market-note">피어슨 상관계수. +1에 가까울수록 같은 방향, −1에 가까울수록 반대 방향입니다. 아래 작은 숫자는 비교에 쓰인 변화율 쌍의 수입니다. 가격 변화가 일정하면 ‘—’로 표시합니다.</p>
+    <details class="market-import">
+      <summary>계산 기준과 출처</summary>
+      <p>각 종목의 배당·분할 반영 수정종가와 장 마감 전 24시간 이내에 기록된 최신 GPU 렌탈가를 짝지었습니다. 일간은 연속 거래일, 주간은 연속된 주의 마지막 거래일 사이의 변화율을 비교했습니다. 어느 쪽이든 기록이 빠지거나 같은 렌탈가 기록을 재사용하게 되는 경우 비교에서 뺐습니다.</p>
+      <p>주가 출처 <a href="https://finance.yahoo.com/quote/NVDA/history/">NVDA</a> · <a href="https://finance.yahoo.com/quote/AVGO/history/">AVGO</a> · <a href="https://finance.yahoo.com/quote/005930.KS/history/">005930.KS</a> · <a href="https://finance.yahoo.com/quote/000660.KS/history/">000660.KS</a> · <a href="https://gpurentalprices.com/data">렌탈가 출처</a></p>
+    </details>
+  </section>
+
+  <section id="nand" class="market-section" aria-labelledby="outlook-title">
+    <section class="market-card outlook" id="outlook" aria-labelledby="outlook-title">
       <div class="card-head">
-        <div><h2 id="nand-title">낸드 현물·계약 가격표</h2><p id="nand-status" class="market-meta" role="status"></p></div>
-        <div class="source-links">
-          <a href="https://www.trendforce.com/price/flash/wafer_spot">현물가 원문</a>
-          <a href="https://www.trendforce.com/price/flash/wafer_contract">계약가 원문</a>
+        <h2 id="outlook-title">낸드 계약가와 전망</h2>
+      </div>
+      <div class="market-trends outlook-trends">
+        <div class="market-card">
+          <h3>512Gb TLC 웨이퍼 계약가</h3>
+          <p class="market-meta">분기 말 월별 가격 · USD · 공개 IR 자료</p>
+          <div class="market-chart" id="contract-chart"></div>
+          <p class="market-note">2026년 9월까지 표시. <a href="https://file.teamgroupinc.com/about/corporate-information-session/2026/2026-q4-tw.pdf#page=18">TEAMGROUP 11/2 IR 18쪽</a> · 원자료 TrendForce</p>
+        </div>
+        <div class="market-card">
+          <h3>TrendForce 계약가 전망 범위</h3>
+          <p class="market-meta">전체 낸드 플래시 · 전분기 대비 (%)</p>
+          <div class="market-chart" id="outlook-chart"></div>
         </div>
       </div>
-      <table class="market-table" aria-label="낸드 현물 및 계약 가격">
-        <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
-        <tbody id="nand-table"></tbody>
+      <h3 id="forecast-history-title">발표별 전망 이력</h3>
+      <table class="market-table outlook-table" aria-labelledby="forecast-history-title">
+        <thead>
+          <tr><th scope="col">대상 분기</th><th scope="col">발표일</th><th scope="col">전망 범위</th><th scope="col">같은 분기 수정 폭</th></tr>
+        </thead>
+        <tbody id="outlook-history">
+          <tr data-quarter="2027-03-31" data-low="-5" data-high="0">
+            <th scope="row">1Q27</th><td><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">26.11.19</time></a></td>
+            <td class="outlook-value">−5~0%</td><td class="outlook-muted">이전 수치 미확인</td>
+          </tr>
+          <tr data-quarter="2026-12-31" data-low="8" data-high="13">
+            <th scope="row">4Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">26.11.19</time></a></td>
+            <td class="outlook-value">+8~13%</td><td class="market-down">7%p 하향</td>
+          </tr>
+          <tr data-quarter="2026-12-31" data-low="15" data-high="20">
+            <th scope="row">4Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html"><time datetime="2026-09-30">26.09.30</time></a></td>
+            <td class="outlook-value">+15~20%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-09-30" data-low="10" data-high="15">
+            <th scope="row">3Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260703-13134.html"><time datetime="2026-07-03">26.07.03</time></a></td>
+            <td class="outlook-value">+10~15%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-06-30" data-low="70" data-high="75">
+            <th scope="row">2Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260331-12995.html"><time datetime="2026-03-31">26.03.31</time></a></td>
+            <td class="outlook-value">+70~75%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2026-03-31" data-low="55" data-high="60">
+            <th scope="row">1Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260202-12911.html"><time datetime="2026-02-02">26.02.02</time></a></td>
+            <td class="outlook-value">+55~60%</td><td class="market-up">22%p 상향</td>
+          </tr>
+          <tr data-quarter="2026-03-31" data-low="33" data-high="38">
+            <th scope="row">1Q26</th><td><a href="https://www.trendforce.com/presscenter/news/20260105-12860.html"><time datetime="2026-01-05">26.01.05</time></a></td>
+            <td class="outlook-value">+33~38%</td><td class="outlook-muted">—</td>
+          </tr>
+          <tr data-quarter="2025-12-31" data-low="5" data-high="10">
+            <th scope="row">4Q25</th><td><a href="https://www.trendforce.com/presscenter/news/20250925-12736.html"><time datetime="2025-09-25">25.09.25</time></a></td>
+            <td class="outlook-value">+5~10%</td><td class="outlook-muted">—</td>
+          </tr>
+        </tbody>
       </table>
+      <p class="market-note">11/19 전망은 중국 클라우드 기업의 SSD 주문 축소와 공급 증가를 반영했습니다. 전체 계약가 하락 예상 시점이 한 분기 앞당겨졌습니다. <a href="https://www.trendforce.com/research/download/RP261118TU">11/18 시장 보고서</a></p>
+      <div id="nand-records" hidden>
+        <div class="card-head">
+          <div><h3>추가 계약가 기록</h3><p id="nand-status" class="market-meta" role="status"></p></div>
+          <select id="nand-series" aria-label="낸드 계약가 품목"></select>
+        </div>
+        <div class="market-chart" id="nand-chart"></div>
+        <table class="market-table" aria-label="추가 낸드 계약가">
+          <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
+          <tbody id="nand-table"></tbody>
+        </table>
+      </div>
       <details class="market-import">
-        <summary>내 낸드 가격 파일 불러오기</summary>
+        <summary>내 낸드 계약가 파일 불러오기</summary>
         <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
         <code>date,kind,item,price,unit</code>
-        <p>날짜는 YYYY-MM-DD, 구분은 현물 spot 또는 계약 contract입니다.</p>
+        <p>날짜는 YYYY-MM-DD, 구분은 contract입니다.</p>
         <div class="file-controls">
-          <input type="file" id="nand-file" accept=".csv,text/csv" aria-label="낸드 가격 CSV">
-          <button id="nand-reset" type="button" hidden>내 기록 지우기</button>
+          <input type="file" id="nand-file" accept=".csv,text/csv" aria-label="낸드 계약가 CSV">
+          <button id="nand-reset" type="button" hidden>내 계약가 기록 지우기</button>
         </div>
         <p id="import-status" aria-live="polite"></p>
       </details>
-    </div>
-    <aside class="market-card outlook" aria-labelledby="outlook-title">
-      <div class="card-head">
-        <h3 id="outlook-title">TrendForce 계약가 전망</h3>
-        <a href="https://www.trendforce.com/presscenter/news/20261119-13314.html">2026.11.19 발표</a>
-      </div>
-      <dl>
-        <div><dt>4Q26 · 전분기 대비</dt><dd>+8~13%</dd></div>
-        <div><dt>1Q27 · 전분기 대비</dt><dd>−5~0%</dd></div>
-      </dl>
-      <p>중국 클라우드 기업의 기업용 SSD 주문 축소와 공급 증가를 반영한 전망입니다. TrendForce는 유통 재고 조정으로 최근 현물가가 20% 넘게 내렸다고 설명했습니다.</p>
-    </aside>
+    </section>
   </section>
 </main>
 </div>
+<script type="application/json" id="corr-data">
+{
+  "from": "2026-07-05",
+  "through": "2026-11-20",
+  "daily": {
+    "p25": {
+      "4090": [[0.08002,90],[0.0372,90],[0.06421,79],[0.10889,79]],
+      "5090": [[-0.01957,90],[-0.19017,90],[-0.19898,79],[-0.18723,79]],
+      "h100": [[-0.0168,90],[-0.02799,90],[-0.1006,79],[-0.0748,79]],
+      "h200": [[0.02841,90],[0.02507,90],[-0.22777,79],[-0.17903,79]],
+      "b200": [[-0.1271,90],[0.02798,90],[-0.06898,79],[-0.11531,79]],
+      "a100": [[0.06702,90],[-0.05103,90],[0.11015,79],[0.07555,79]],
+      "l40s": [[0.04991,90],[0.18947,90],[-0.01294,79],[0.05073,79]]
+    },
+    "low": {
+      "4090": [[0.14716,90],[0.03817,90],[0.21534,79],[0.25607,79]],
+      "5090": [[-0.07522,90],[-0.10822,90],[-0.14974,79],[-0.12735,79]],
+      "h100": [[-0.06063,90],[-0.06418,90],[0.11313,79],[0.08043,79]],
+      "h200": [[-0.07314,90],[-0.13679,90],[-0.14106,79],[-0.09208,79]],
+      "b200": [[-0.01954,90],[-0.0708,90],[-0.13983,79],[-0.08253,79]],
+      "a100": [[null,90],[null,90],[0.16182,79],[0.12909,79]],
+      "l40s": [[-0.37405,90],[-0.4152,90],[-0.05605,79],[-0.11002,79]]
+    }
+  },
+  "weekly": {
+    "p25": {
+      "4090": [[0.2699,16],[0.2497,16],[-0.04971,19],[0.16256,19]],
+      "5090": [[0.44399,16],[-0.16332,16],[-0.50998,19],[-0.54159,19]],
+      "h100": [[-0.12545,16],[0.07165,16],[-0.5247,19],[-0.45436,19]],
+      "h200": [[0.13015,16],[0.05638,16],[-0.40462,19],[-0.47969,19]],
+      "b200": [[-0.62727,16],[-0.35946,16],[-0.22897,19],[-0.24225,19]],
+      "a100": [[0.2434,16],[-0.01736,16],[0.25206,19],[0.2513,19]],
+      "l40s": [[0.06264,16],[0.67288,16],[0.38753,19],[0.31736,19]]
+    },
+    "low": {
+      "4090": [[-0.11826,16],[-0.07221,16],[0.00949,19],[0.03625,19]],
+      "5090": [[0.18282,16],[-0.03268,16],[-0.20135,19],[-0.24299,19]],
+      "h100": [[null,16],[null,16],[-0.04618,19],[-0.07283,19]],
+      "h200": [[-0.10524,16],[-0.05159,16],[-0.24989,19],[-0.26769,19]],
+      "b200": [[-0.13575,16],[-0.13264,16],[-0.256,19],[-0.24863,19]],
+      "a100": [[null,16],[null,16],[0.34867,19],[0.47093,19]],
+      "l40s": [[-0.53812,16],[0.58038,16],[0.38653,19],[0.43891,19]]
+    }
+  }
+}
+</script>
 </body>
 </html>

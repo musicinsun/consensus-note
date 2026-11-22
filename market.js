@@ -5,7 +5,6 @@
   };
   // A list preserves the chosen order even for all-numeric model keys.
   const gpuModels = [...Object.entries(models), ["4090", "RTX 4090"], ["5090", "RTX 5090 (Blackwell)"]];
-  const labels = { spot: "현물", contract: "계약" };
   const day = 86400000;
   const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
   const axisNumber = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -15,6 +14,12 @@
   const localKey = "consensus-note:nand-prices:v1";
   const sourcePrefix = "window.MARKET_PRICES = ";
   const state = { data: window.MARKET_PRICES || { gpu: {}, nand: [] }, local: [], series: [] };
+  // Quarter-ending month quotes cited in TEAMGROUP's Nov 2, 2026 IR, slide 18.
+  const contractReference = new Map([
+    ["2025-12-31", 12.16], ["2026-03-31", 23.69],
+    ["2026-06-30", 25.76], ["2026-09-30", 26.43],
+  ]);
+  const isContract = row => row.kind === "contract";
   const time = date => Date.parse(date + "T00:00:00Z");
   const iso = stamp => new Date(stamp).toISOString().slice(0, 10);
 
@@ -55,53 +60,96 @@
     body.append(row);
   }
 
-  function chart(box, points, lines, unit, empty, daily = false) {
+  function chart(box, points, lines, unit, empty, options = {}) {
     box.replaceChildren();
-    const values = points.flatMap(row => lines.map(line => row[line.key])).filter(Number.isFinite);
+    const values = points.flatMap(row => lines.flatMap(line =>
+      (line.range || [line.key]).map(key => row[key]))).filter(Number.isFinite);
     if (!values.length) {
       box.append(html("p", empty, "chart-empty"));
       return;
     }
     const width = Math.max(240, box.clientWidth);
-    const height = width < 420 ? 218 : 285;
+    const height = width < 420 ? 218 : (width >= 680 && options.daily ? 350 : 285);
     const padding = { top: 16, right: 12, bottom: 30, left: 50 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
     const first = time(points[0].date), last = time(points.at(-1).date);
     const low = Math.min(...values), high = Math.max(...values);
-    const cushion = (high - low) * .12 || low * .08 || 1;
-    const min = Math.max(0, low - cushion), max = high + cushion;
+    const cushion = (high - low) * .12 || Math.abs(low) * .08 || 1;
+    const requestedTicks = options.ticks || [];
+    const min = Math.min(low < 0 ? low - cushion : Math.max(0, low - cushion), ...requestedTicks);
+    const max = Math.max(high + cushion, ...requestedTicks);
     const x = stamp => padding.left + (last === first ? plotWidth / 2 : (stamp - first) * plotWidth / (last - first));
     const y = value => padding.top + (max - value) * plotHeight / (max - min);
     const graph = svg("svg", {
       viewBox: "0 0 " + width + " " + height,
-      height, role: "img", "aria-label": lines.map(line => line.label).join(" / ") + " 가격 추이 · " + unit,
+      height, role: "img", "aria-label": lines.map(line => line.label).join(" / ") + " · " + unit,
     });
-    for (let i = 0; i <= 4; i++) {
-      const value = min + (max - min) * i / 4, py = y(value);
-      graph.append(svg("line", { x1: padding.left, x2: width - padding.right, y1: py, y2: py, class: "guide" }));
+    const yTicks = options.ticks || Array.from({ length: 5 }, (_, i) => min + (max - min) * i / 4);
+    for (const value of yTicks) {
+      const py = y(value);
+      const style = options.suffix && value === 0 ? "guide guide-zero" : "guide";
+      graph.append(svg("line", { x1: padding.left, x2: width - padding.right, y1: py, y2: py, class: style }));
       graph.append(svg("text", { x: padding.left - 6, y: py + 4, "text-anchor": "end" },
-        max - min < .04 ? priceText(value) : axisNumber.format(value)));
+        (max - min < .04 ? priceText(value) : axisNumber.format(value)) + (options.suffix || "")));
     }
     const tickCount = first === last ? 1 : Math.min(width < 420 ? 3 : 5, points.length, (last - first) / day + 1);
-    Array.from({ length: tickCount }, (_, i) => i).forEach(i => {
+    const xTicks = options.quarters ? points.map(point => [time(point.date), point.label])
+      : Array.from({ length: tickCount }, (_, i) => {
       const stamp = tickCount === 1 ? first : first + Math.round((last - first) / day * i / (tickCount - 1)) * day;
-      const anchor = tickCount === 1 ? "middle" : i === 0 ? "start" : i === tickCount - 1 ? "end" : "middle";
-      graph.append(svg("text", { x: x(stamp), y: height - 8, "text-anchor": anchor }, iso(stamp)));
+      return [stamp, iso(stamp)];
     });
+    xTicks.forEach(([stamp, label], i) => {
+      const anchor = xTicks.length === 1 || options.quarters ? "middle" : i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle";
+      const px = options.quarters ? Math.min(width - 19, x(stamp)) : x(stamp);
+      graph.append(svg("text", { x: px, y: height - 8, "text-anchor": anchor }, label));
+    });
+    let hasGaps = false;
     for (const line of lines) {
-      let path = "", previous = null;
+      if (line.range) {
+        const marks = [];
+        const midpoints = [];
+        for (const point of points) {
+          const [lower, upper] = line.range.map(key => point[key]);
+          if (!Number.isFinite(lower) || !Number.isFinite(upper)) continue;
+          const cx = x(time(point.date)) + line.offset;
+          const cy = y((lower + upper) / 2);
+          const span = svg("line", { x1: cx, x2: cx, y1: y(upper), y2: y(lower),
+            stroke: line.color, "stroke-width": 5, "stroke-linecap": "round" });
+          span.append(svg("title", {}, point.label + " · " + line.label + " " + lower + "% ~ " + upper + "%"));
+          marks.push(span, svg("circle", { cx, cy, r: 3.8, fill: line.color }));
+          midpoints.push(cx + "," + cy);
+        }
+        if (line.connect) graph.append(svg("polyline", { points: midpoints.join(" "),
+          fill: "none", stroke: line.color, "stroke-width": 1.6, "stroke-opacity": .55 }));
+        graph.append(...marks);
+        continue;
+      }
+      let path = "", gaps = "", previous = null;
       const dots = [];
       for (const point of points) {
         const value = point[line.key], stamp = time(point.date);
         if (Number.isFinite(value)) {
           const cx = x(stamp), cy = y(value);
-          path += (previous == null || (daily && stamp - previous > day) ? "M" : "L") + cx + "," + cy;
+          const coordinate = cx + "," + cy;
+          const hasGap = previous && options.daily && stamp - previous.stamp > day;
+          if (hasGap) gaps += "M" + previous.coordinate + "L" + coordinate;
+          path += (!previous || hasGap ? "M" : "L") + coordinate;
           const dot = svg("circle", { cx, cy, r: points.length > 100 ? 1.6 : 3, fill: line.color });
           dot.append(svg("title", {}, point.date + " · " + line.label + " " + priceText(value) + " " + unit));
           dots.push(dot);
-          previous = stamp;
-        } else previous = null;
+          if (options.valueLabels) {
+            dots.push(svg("text", { x: cx, y: cy - 9, "text-anchor": "middle", class: "plot-value" }, dollar.format(value)));
+          }
+          previous = { stamp, coordinate };
+        } else if (!options.daily) {
+          previous = null;
+        }
+      }
+      if (gaps) {
+        hasGaps = true;
+        graph.append(svg("path", { d: gaps, fill: "none", stroke: line.color, "stroke-width": 1.5,
+          "stroke-dasharray": "4 5", "stroke-opacity": .65 }));
       }
       graph.append(svg("path", { d: path, fill: "none", stroke: line.color, "stroke-width": 2, "stroke-linejoin": "round" }), ...dots);
     }
@@ -112,7 +160,8 @@
       item.style.setProperty("--series", line.color);
       key.append(item);
     }
-    const caption = points.length === 1 ? "기록 1건 · 데이터가 쌓이면 추세선을 표시합니다." : unit;
+    const caption = points.length === 1 ? "기록 1건 · 데이터가 쌓이면 추세선을 표시합니다."
+      : unit + (hasGaps ? " · 점선 사이에는 가격 기록이 없습니다." : "");
     figure.append(key, graph, html("figcaption", caption));
     box.append(figure);
   }
@@ -125,7 +174,39 @@
     chart(el("gpu-chart"), all.filter(row => time(row.date) >= cutoff), [
       { key: "low", label: "최저가", color: "var(--s-price)" },
       { key: "p25", label: "하위 25% 가격", color: "var(--s-spread)" },
-    ], "USD/GPU·시간", "이 모델의 가격 기록이 없습니다.", true);
+    ], "USD/GPU·시간", "이 모델의 가격 기록이 없습니다.", { daily: true });
+  }
+
+  const forecasts = new Map();
+  for (const row of el("outlook-history").rows) {
+    const { quarter, low, high } = row.dataset;
+    const publication = row.querySelector("time").dateTime;
+    if (!forecasts.has(quarter)) forecasts.set(quarter, []);
+    forecasts.get(quarter).push({ label: row.cells[0].textContent, publication, low: Number(low), high: Number(high) });
+  }
+
+  function drawOutlook() {
+    const quarters = [...forecasts.keys()].sort().map(date => {
+      const versions = forecasts.get(date).sort((a, b) => a.publication.localeCompare(b.publication));
+      const latest = versions.at(-1);
+      const prior = versions.at(-2);
+      return { date, label: latest.label, price: contractReference.get(date),
+        priorLow: prior?.low, priorHigh: prior?.high, low: latest.low, high: latest.high };
+    });
+    const latestActual = quarters.findLast(point => Number.isFinite(point.price));
+    if (latestActual) {
+      const [year, month] = latestActual.date.split("-");
+      el("contract-value").textContent = dollar.format(latestActual.price);
+      el("contract-detail").textContent = year + "년 " + Number(month) + "월 · 공개 IR";
+    }
+    chart(el("contract-chart"), quarters, [
+      { key: "price", label: "분기 말 계약가", color: "var(--s-price)" },
+    ], "USD", "공개 계약가 기록이 없습니다.", { quarters: true, valueLabels: true, ticks: [10, 15, 20, 25, 30] });
+    chart(el("outlook-chart"), quarters, [
+      { range: ["priorLow", "priorHigh"], label: "이전 전망", color: "var(--s-stock)", offset: -5 },
+      { range: ["low", "high"], label: "최근 전망", color: "var(--s-spread)", offset: 5, connect: true },
+    ], "전분기 대비 (%)", "공개 전망 기록이 없습니다.",
+    { quarters: true, suffix: "%", ticks: [-10, 0, 20, 40, 60, 80] });
   }
 
   function renderGpu() {
@@ -155,6 +236,30 @@
     drawGpu();
   }
 
+  const correlation = JSON.parse(el("corr-data").textContent);
+  el("corr-period").textContent = correlation.from + " ~ " + correlation.through + " 분석";
+
+  function renderCorrelation() {
+    const results = correlation[el("corr-frequency").value][el("corr-metric").value];
+    const body = el("corr-body");
+    body.replaceChildren();
+    for (const [key, label] of gpuModels) {
+      const cells = results[key].map(([coefficient, count]) => {
+        const rounded = coefficient == null ? null : Math.round(coefficient * 100) / 100;
+        const value = rounded == null ? "—" : (rounded > 0 ? "+" : "") + rounded.toFixed(2);
+        const cell = html("td", value);
+        if (coefficient) {
+          cell.className = coefficient > 0 ? "corr-positive" : "corr-negative";
+          cell.style.setProperty("--corr-strength", Math.round(Math.abs(coefficient) * 28) + "%");
+        }
+        if (coefficient == null) cell.title = "비교 구간의 렌탈가 변화율이 일정합니다.";
+        cell.append(html("small", count + "쌍"));
+        return cell;
+      });
+      insertRow(body, label.split(" (")[0], "", cells);
+    }
+  }
+
   function mergeNand(rows) {
     const groups = new Map();
     for (const row of rows) {
@@ -163,50 +268,37 @@
       groups.get(key).set(row.date, row);
     }
     return [...groups.values()].map(dates => [...dates.values()].sort((a, b) => a.date.localeCompare(b.date)))
-      .sort((a, b) => b[0].kind.localeCompare(a[0].kind) || a[0].item.localeCompare(b[0].item));
+      .sort((a, b) => a[0].item.localeCompare(b[0].item));
   }
 
   function drawNand() {
     const rows = state.series[Number(el("nand-series").value)] || [];
     chart(el("nand-chart"), rows, [
-      { key: "price", label: rows.length ? labels[rows[0].kind] + " · " + rows[0].item : "낸드 가격", color: "var(--s-price)" },
-    ], rows[0]?.unit || "", "가격 파일을 불러오거나 공개 게시가 허용된 공급 데이터를 연결하면 차트가 표시됩니다.");
+      { key: "price", label: rows[0]?.item || "낸드 계약가", color: "var(--s-price)" },
+    ], rows[0]?.unit || "", "계약가 기록이 없습니다.");
   }
 
   function renderNand() {
     const selection = el("nand-series"), oldLabel = selection.selectedOptions[0]?.textContent;
     const body = el("nand-table");
     body.replaceChildren();
-    state.series = mergeNand([...state.data.nand, ...state.local]);
-    for (const kind of Object.keys(labels)) {
-      const latest = state.series.map(rows => rows.at(-1)).filter(row => row.kind === kind)
-        .sort((a, b) => b.date.localeCompare(a.date))[0];
-      el(kind + "-value").textContent = latest ? priceText(latest.price) + " " + latest.unit : "—";
-      el(kind + "-detail").textContent = latest ? latest.item + " · " + latest.date : "가격 기록 없음";
-    }
+    const localContracts = state.local.filter(isContract);
+    state.series = mergeNand(state.data.nand.filter(isContract).concat(localContracts));
     selection.replaceChildren();
-    el("nand-reset").hidden = !state.local.length;
-    if (!state.series.length) {
-      const row = html("tr"), message = html("td", "연결된 현물·계약 가격 기록이 없습니다.");
-      message.colSpan = 4;
-      row.append(message);
-      body.append(row);
-      selection.add(new Option("품목 없음", ""));
-      selection.disabled = true;
-    } else {
-      selection.disabled = false;
-      state.series.forEach((rows, index) => {
-        const last = rows.at(-1), prior = rows.at(-2);
-        const name = labels[last.kind] + " · " + last.item + " (" + last.unit + ")";
-        selection.add(new Option(name, index, false, name === oldLabel));
-        const amount = html("td", priceText(last.price));
-        amount.append(html("small", last.unit));
-        insertRow(body, last.item, labels[last.kind], [
-          amount, changeCell(last.price, prior?.price), html("td", last.date),
-        ]);
-      });
-    }
-    el("nand-status").textContent = state.local.length ? "내 파일 포함" : "";
+    el("nand-records").hidden = !state.series.length;
+    el("nand-reset").hidden = !localContracts.length;
+    if (!state.series.length) return;
+    state.series.forEach((rows, index) => {
+      const last = rows.at(-1), prior = rows.at(-2);
+      const name = last.item + " (" + last.unit + ")";
+      selection.add(new Option(name, index, false, name === oldLabel));
+      const amount = html("td", priceText(last.price));
+      amount.append(html("small", last.unit));
+      insertRow(body, last.item, "", [
+        amount, changeCell(last.price, prior?.price), html("td", last.date),
+      ]);
+    });
+    el("nand-status").textContent = localContracts.length ? "내 파일 포함" : "";
     drawNand();
   }
 
@@ -223,7 +315,7 @@
       const price = Number(amount), stamp = time(date);
       if (fields.length !== 5 || !/^\d{4}-\d{2}-\d{2}$/.test(date)
           || !Number.isFinite(stamp) || iso(stamp) !== date || stamp > Date.now() + day
-          || !Object.hasOwn(labels, kind) || !item || item.length > 100
+          || (kind !== "contract" && kind !== "spot") || !item || item.length > 100
           || !unit || unit.length > 30 || !Number.isFinite(price) || price <= 0) {
         throw new Error((index + 2) + "번째 줄의 날짜, 구분, 품목, 가격, 단위를 확인해 주세요.");
       }
@@ -236,11 +328,12 @@
     if (!file) return;
     try {
       if (file.size > 2_000_000) throw new Error("CSV 파일은 2MB 이하로 저장해 주세요.");
-      const rows = parseNandCsv(await file.text());
+      const rows = parseNandCsv(await file.text()).filter(isContract);
+      if (!rows.length) throw new Error("CSV에 계약가(contract) 행이 없습니다.");
       const merged = mergeNand([...state.local, ...rows]).flat();
       localStorage.setItem(localKey, JSON.stringify(merged));
       state.local = merged;
-      el("import-status").textContent = "가격 기록 " + rows.length + "개를 불러왔습니다.";
+      el("import-status").textContent = "계약가 기록 " + rows.length + "개를 불러왔습니다.";
     } catch (error) {
       el("import-status").textContent = error.message;
     } finally {
@@ -249,14 +342,17 @@
     }
   });
   el("nand-reset").addEventListener("click", () => {
-    state.local = [];
-    localStorage.removeItem(localKey);
-    el("import-status").textContent = "이 브라우저에 저장한 가격 기록을 지웠습니다.";
+    state.local = state.local.filter(row => !isContract(row));
+    if (state.local.length) localStorage.setItem(localKey, JSON.stringify(state.local));
+    else localStorage.removeItem(localKey);
+    el("import-status").textContent = "이 브라우저에 저장한 계약가 기록을 지웠습니다.";
     renderNand();
   });
   for (const [key, label] of gpuModels) el("gpu-model").add(new Option(label, key));
   el("gpu-model").addEventListener("change", drawGpu);
   el("gpu-range").addEventListener("change", drawGpu);
+  el("corr-frequency").addEventListener("change", renderCorrelation);
+  el("corr-metric").addEventListener("change", renderCorrelation);
   el("nand-series").addEventListener("change", drawNand);
   try {
     const saved = JSON.parse(localStorage.getItem(localKey));
@@ -265,11 +361,13 @@
     state.local = [];
   }
   renderGpu();
+  renderCorrelation();
   renderNand();
+  drawOutlook();
   let pending;
   window.addEventListener("resize", () => {
     clearTimeout(pending);
-    pending = setTimeout(() => { drawGpu(); drawNand(); }, 100);
+    pending = setTimeout(() => { drawGpu(); if (state.series.length) drawNand(); drawOutlook(); }, 100);
   });
 
   // Scheduled commits made by GITHUB_TOKEN need not trigger a Pages rebuild.
