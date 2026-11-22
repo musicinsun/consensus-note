@@ -170,7 +170,7 @@
     const rows = state.series[Number(el("nand-series").value)] || [];
     chart(el("nand-chart"), rows, [
       { key: "price", label: rows.length ? labels[rows[0].kind] + " · " + rows[0].item : "낸드 가격", color: "var(--s-price)" },
-    ], rows[0]?.unit || "", "가격 파일을 불러오거나 공개 게시가 허용된 공급 데이터를 연결하면 차트가 표시됩니다.");
+    ], rows[0]?.unit || "", "시세 데이터가 연결되면 추이를 표시합니다. 공개 현물가는 아래 가격표의 원문 링크에서 볼 수 있습니다.");
   }
 
   function renderNand() {
@@ -182,7 +182,8 @@
       const latest = state.series.map(rows => rows.at(-1)).filter(row => row.kind === kind)
         .sort((a, b) => b.date.localeCompare(a.date))[0];
       el(kind + "-value").textContent = latest ? priceText(latest.price) + " " + latest.unit : "—";
-      el(kind + "-detail").textContent = latest ? latest.item + " · " + latest.date : "가격 기록 없음";
+      el(kind + "-detail").textContent = latest ? latest.item + " · " + latest.date
+        : state.data.nand.length ? "이 구분의 가격 기록 없음" : "시세 데이터 미연결";
     }
     selection.replaceChildren();
     el("nand-reset").hidden = !state.local.length;
@@ -207,6 +208,7 @@
       });
     }
     el("nand-status").textContent = state.local.length ? "내 파일 포함" : "";
+    el("nand-feed-note").hidden = state.data.nand.length > 0;
     drawNand();
   }
 

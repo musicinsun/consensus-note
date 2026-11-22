@@ -6,9 +6,9 @@
 <title>낸드·GPU 가격 | 시장 리서치</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="market.css?v=2">
+<link rel="stylesheet" href="market.css?v=3">
 <script src="market-data.js" defer></script>
-<script src="market.js?v=2" defer></script>
+<script src="market.js?v=3" defer></script>
 </head>
 <body>
 <div class="app">
@@ -25,8 +25,8 @@
   </header>
 
   <dl class="market-kpis" aria-label="최근 가격">
-    <div class="market-card"><dt>낸드 현물가</dt><dd id="spot-value">—</dd><dd id="spot-detail" class="kpi-detail">가격 기록 없음</dd></div>
-    <div class="market-card"><dt>낸드 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail">가격 기록 없음</dd></div>
+    <div class="market-card"><dt>낸드 현물가</dt><dd id="spot-value">—</dd><dd id="spot-detail" class="kpi-detail">시세 데이터 미연결</dd></div>
+    <div class="market-card"><dt>낸드 계약가</dt><dd id="contract-value">—</dd><dd id="contract-detail" class="kpi-detail">시세 데이터 미연결</dd></div>
     <div class="market-card"><dt>H100 최저가</dt><dd id="h100-value">—</dd><dd id="h100-detail" class="kpi-detail"></dd></div>
     <div class="market-card"><dt>RTX 5090 최저가</dt><dd id="5090-value">—</dd><dd id="5090-detail" class="kpi-detail"></dd></div>
   </dl>
@@ -85,6 +85,7 @@
         <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
         <tbody id="nand-table"></tbody>
       </table>
+      <p class="market-note" id="nand-feed-note">TrendForce 원문에서 공개 현물가를 볼 수 있습니다. 이 사이트의 자동 갱신에는 공개 게시가 허용된 시세 데이터가 필요합니다.</p>
       <details class="market-import">
         <summary>내 낸드 가격 파일 불러오기</summary>
         <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
@@ -99,14 +100,32 @@
     </div>
     <aside class="market-card outlook" aria-labelledby="outlook-title">
       <div class="card-head">
-        <h3 id="outlook-title">TrendForce 계약가 전망</h3>
-        <a href="https://www.trendforce.com/presscenter/news/20261119-13314.html">2026.11.19 발표</a>
+        <div>
+          <h2 id="outlook-title">TrendForce 낸드 계약가 전망 수정 이력</h2>
+          <p class="market-meta">전체 낸드 플래시 · 전분기 대비</p>
+        </div>
       </div>
-      <dl>
-        <div><dt>4Q26 · 전분기 대비</dt><dd>+8~13%</dd></div>
-        <div><dt>1Q27 · 전분기 대비</dt><dd>−5~0%</dd></div>
-      </dl>
-      <p>중국 클라우드 기업의 기업용 SSD 주문 축소와 공급 증가를 반영한 전망입니다. TrendForce는 유통 재고 조정으로 최근 현물가가 20% 넘게 내렸다고 설명했습니다.</p>
+      <table class="market-table outlook-table" aria-labelledby="outlook-title">
+        <thead>
+          <tr><th scope="col">분기</th><th scope="col">이전 전망</th><th scope="col">최근 전망</th><th scope="col">수정 폭</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">4Q26</th>
+            <td>+15~20%<small><a href="https://www.trendforce.com/presscenter/news/20260930-13258.html"><time datetime="2026-09-30">9/30 발표</time></a></small></td>
+            <td class="outlook-value">+8~13%<small><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">11/19 발표</time></a></small></td>
+            <td class="market-down">7%p 하향<small>범위 상·하단</small></td>
+          </tr>
+          <tr>
+            <th scope="row">1Q27</th>
+            <td class="outlook-muted">미확인<small>이전 공개 수치</small></td>
+            <td class="outlook-value">−5~0%<small><a href="https://www.trendforce.com/presscenter/news/20261119-13314.html"><time datetime="2026-11-19">11/19 발표</time></a></small></td>
+            <td>하락 전망</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="market-note">TrendForce는 전체 계약가 하락 시작을 2Q27에서 1Q27로 한 분기 앞당겼습니다. 중국 클라우드 기업의 기업용 SSD 주문 축소와 공급 증가를 반영했습니다. <a href="https://www.trendforce.com/research/download/RP261118TU">11/18 시장 보고서</a></p>
+      <p class="market-note">TrendForce는 유통 재고 조정으로 최근 현물가가 20% 넘게 내렸다고 설명했습니다. <a href="https://www.trendforce.com/presscenter/news/20261119-13314.html">11/19 보도자료</a></p>
     </aside>
   </section>
 </main>

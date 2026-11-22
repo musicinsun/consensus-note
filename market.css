@@ -22,10 +22,8 @@
 .market-kpis .kpi-detail{font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0;line-height:1.45;overflow-wrap:anywhere}
 .market-meta{margin:4px 0 0}
 .market-meta:empty{display:none}
-.outlook dl{display:flex;gap:clamp(22px,5vw,68px);margin:14px 0 8px}
-.outlook dt,.market-meta,.market-note,.outlook p,.market-import p{color:var(--muted);font-size:13px;line-height:1.5}
-.outlook dd{font-size:22px;font-weight:700;margin:3px 0 0;font-variant-numeric:tabular-nums}
-.outlook p,.market-note{margin:8px 0 0}
+.market-meta,.market-note,.market-import p{color:var(--muted);font-size:13px;line-height:1.5}
+.market-note{margin:8px 0 0}
 .market-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:14px;font-variant-numeric:tabular-nums}
 .market-table th,.market-table td{text-align:right;padding:14px 8px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .market-table thead th{color:var(--muted);font-weight:500;font-size:14px}
@@ -36,6 +34,10 @@
 .market-table small{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:3px}
 .market-table tr:last-child>*{border-bottom:0}
 .market-table td[colspan]{text-align:left;color:var(--muted);width:auto}
+.outlook-table th:first-child{width:19%}
+.outlook-table .outlook-muted{color:var(--muted);font-weight:400}
+.outlook-table .outlook-value{font-weight:700;font-size:18px}
+.outlook-table small a{font-size:inherit}
 .market-up{color:var(--up)}
 .market-down{color:var(--down)}
 .market select,.market button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit;font-size:13px;max-width:100%}
@@ -68,4 +70,6 @@
   .market-table td,.market-table thead th{font-size:12px}
   .market-table tbody th{font-size:13px}
   .market-table small{font-size:11px}
+  .outlook-table th:first-child{width:17%}
+  .outlook-table .outlook-value{font-size:14px}
 }
