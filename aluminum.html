@@ -76,7 +76,7 @@ details.tbl td{color:var(--text)}
     <section class="card"><h2>4. 스프레드: 6개월 전 − 1개월 전</h2><p>판매 기준가 − 매입 기준가 · 0 위면 시차가 유리 · USD/톤</p><div class="chart" id="c4"></div></section>
     <section class="card"><h2>5. 스프레드: 3개월 전 − 1개월 전</h2><p>USD/톤</p><div class="chart" id="c5"></div></section>
   </div>
-  <section class="card"><h2>6. 스프레드 vs 삼아알미늄 주가</h2><p>왼쪽 축: 삼아알미늄 종가(원) · 오른쪽 축: 스프레드(USD/톤, 점선이 0) · 마우스를 올리면 같은 날 실제 값이 나와요</p><div class="chart" id="c6"></div></section>
+  <section class="card"><h2>6. 스프레드 vs 삼아알미늄 주가</h2><p>왼쪽 축: 삼아알미늄 종가(원) · 오른쪽 축: 6M−1M 스프레드(USD/톤, 점선이 0) · 마우스를 올리면 같은 날 실제 값이 나와요</p><div class="chart" id="c6"></div></section>
 
   <section class="card">
     <details class="tbl"><summary>최근 20거래일 표로 보기</summary><div id="tbl"></div></details>
@@ -302,7 +302,7 @@ details.tbl td{color:var(--text)}
     chart(document.getElementById("c3"), data, [P_PRICE, P_STOCK], 150);
     chart(document.getElementById("c4"), data, [P_S61], 200);
     chart(document.getElementById("c5"), data, [P_S31], 200);
-    overlay(document.getElementById("c6"), data, [{...P_PX, label: "삼아알미늄 (왼쪽 축, 원)"}, {...P_S61, label: "6M−1M (오른쪽 축, USD/톤)"}, {...P_S31, label: "3M−1M (오른쪽 축, USD/톤)"}], 360);
+    overlay(document.getElementById("c6"), data, [{...P_PX, label: "삼아알미늄 (왼쪽 축, 원)"}, {...P_S61, label: "6M−1M (오른쪽 축, USD/톤)"}], 360);
   }
   document.querySelectorAll(".ranges button").forEach(b => b.addEventListener("click", () => {
     months = +b.dataset.m;
