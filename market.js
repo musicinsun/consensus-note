@@ -255,34 +255,6 @@
     drawGpu();
   }
 
-  const referenceCorrelation = JSON.parse(el("corr-data").textContent);
-
-  function renderCorrelation() {
-    const correlation = state.data.correlation || referenceCorrelation;
-    el("corr-period").textContent = correlation.from + " ~ " + correlation.through + " 분석";
-    el("corr-stock-source").textContent = correlation.source || "";
-    el("corr-stock-source").hidden = !correlation.source;
-    el("corr-original-source").hidden = Boolean(correlation.source);
-    const results = correlation[el("corr-frequency").value][el("corr-metric").value];
-    const body = el("corr-body");
-    body.replaceChildren();
-    for (const [key, label] of gpuModels) {
-      const cells = results[key].map(([coefficient, count]) => {
-        const rounded = coefficient == null ? null : Math.round(coefficient * 100) / 100;
-        const value = rounded == null ? "—" : (rounded > 0 ? "+" : "") + rounded.toFixed(2);
-        const cell = html("td", value);
-        if (coefficient) {
-          cell.className = coefficient > 0 ? "corr-positive" : "corr-negative";
-          cell.style.setProperty("--corr-strength", Math.round(Math.abs(coefficient) * 28) + "%");
-        }
-        if (coefficient == null) cell.title = "변화율이 일정하거나 비교할 수 있는 표본이 부족합니다.";
-        cell.append(html("small", count + "쌍"));
-        return cell;
-      });
-      insertRow(body, label.split(" (")[0], "", cells);
-    }
-  }
-
   function mergeGpu(initial, latest) {
     return Object.fromEntries(gpuModels.map(([key]) => {
       const rows = new Map((initial[key] || []).map(row => [row.date, row]));
@@ -385,8 +357,6 @@
   for (const [key, label] of gpuModels) el("gpu-model").add(new Option(label, key));
   el("gpu-model").addEventListener("change", drawGpu);
   el("gpu-range").addEventListener("change", drawGpu);
-  el("corr-frequency").addEventListener("change", renderCorrelation);
-  el("corr-metric").addEventListener("change", renderCorrelation);
   el("nand-series").addEventListener("change", drawNand);
   try {
     const saved = JSON.parse(localStorage.getItem(localKey));
@@ -395,7 +365,6 @@
     state.local = [];
   }
   renderGpu();
-  renderCorrelation();
   renderNand();
   drawDram();
   drawOutlook();
@@ -421,11 +390,8 @@
       if (!source.startsWith(sourcePrefix) || !source.endsWith(";")) return;
       const data = JSON.parse(source.slice(sourcePrefix.length, -1));
       if (data.version !== 1 || data.gpuSource !== "gpurentalprices" || !data.gpu || !Array.isArray(data.nand)) return;
-      const previous = state.data.correlation || referenceCorrelation;
-      const correlation = data.correlation?.through >= previous.through ? data.correlation : previous;
-      state.data = { ...data, gpu: mergeGpu(state.data.gpu, data.gpu), correlation };
+      state.data = { ...data, gpu: mergeGpu(state.data.gpu, data.gpu) };
       renderGpu();
-      renderCorrelation();
       renderNand();
     }).catch(() => { /* The published snapshot remains available. */ });
   }

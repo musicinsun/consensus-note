@@ -11,8 +11,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from market_correlation import fetch_weekly_report
-
 
 DATA = Path(__file__).with_name("market-data.js")
 PREFIX = "window.MARKET_PRICES = "
@@ -188,19 +186,6 @@ def main():
     except (ValueError, KeyError, OSError, TypeError, AttributeError) as error:
         failures.append("gpu")
         print(f"GPU: unavailable ({type(error).__name__})", file=sys.stderr)
-    if "--weekly-correlation" in sys.argv[1:] and "gpu" not in failures:
-        token = os.environ.get("EODHD_API_TOKEN")
-        if token:
-            try:
-                report = fetch_weekly_report(archive["gpu"], token, datetime.now(KST).date(), get_json)
-                if report["through"] >= archive.get("correlation", {}).get("through", "2026-11-20"):
-                    archive["correlation"] = report
-                    print("Correlation: through " + report["through"])
-            except (ValueError, KeyError, OSError, TypeError, AttributeError, IndexError) as error:
-                failures.append("correlation")
-                print(f"Correlation: unavailable ({type(error).__name__})", file=sys.stderr)
-        else:
-            print("Correlation: stock data source not connected")
     if url := os.environ.get("NAND_FEED_URL"):
         try:
             if urlsplit(url).scheme != "https":
