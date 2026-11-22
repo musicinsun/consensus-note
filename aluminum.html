@@ -76,7 +76,7 @@ details.tbl td{color:var(--text)}
     <section class="card"><h2>4. 스프레드: 6개월 전 − 1개월 전</h2><p>판매 기준가 − 매입 기준가 · 0 위면 시차가 유리 · USD/톤</p><div class="chart" id="c4"></div></section>
     <section class="card"><h2>5. 스프레드: 3개월 전 − 1개월 전</h2><p>USD/톤</p><div class="chart" id="c5"></div></section>
   </div>
-  <section class="card"><h2>6. 스프레드 vs 삼아알미늄 주가</h2><p>세 선을 한 차트에 겹침 · 단위가 달라서 보이는 기간 안의 최저=0, 최고=100으로 맞췄어요 · 마우스를 올리면 실제 값(원, USD/톤)이 나와요</p><div class="chart" id="c6"></div></section>
+  <section class="card"><h2>6. 스프레드 vs 삼아알미늄 주가</h2><p>왼쪽 축: 삼아알미늄 종가(원) · 오른쪽 축: 스프레드(USD/톤, 점선이 0) · 마우스를 올리면 같은 날 실제 값이 나와요</p><div class="chart" id="c6"></div></section>
 
   <section class="card">
     <details class="tbl"><summary>최근 20거래일 표로 보기</summary><div id="tbl"></div></details>
@@ -193,29 +193,41 @@ details.tbl td{color:var(--text)}
     hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", hide);
   }
 
-  // 단위가 다른 선들을 한 차트에 겹쳐 그림: 보이는 기간 안에서 각 선의 최저=0, 최고=100으로 맞춤.
-  // 그래서 선이 서로 교차해 보이고, 마우스를 올리면 실제 값(원, 달러)을 보여줌.
+  // 단위가 다른 선들을 한 차트에 겹쳐 그림: 왼쪽 축(axis "L")과 오른쪽 축(나머지)을 따로 둠.
+  // 마우스를 올리면 실제 값(원, 달러)을 보여줌.
   function overlay(box, data, series, H){
     box.replaceChildren();
     if (!data.length) { box.appendChild(el("p", null, "데이터가 없어요.")); return; }
     const lg = el("div", "legend");
     series.forEach(p => { const it = el("span", "lgi"); const sw = el("span", "sw"); sw.style.background = css(p.color); it.appendChild(sw); it.appendChild(document.createTextNode(p.label)); lg.appendChild(it); });
     box.appendChild(lg);
-    const W = Math.max(box.clientWidth, 280), m = {t: 10, r: 12, b: 24, l: 36};
+    const W = Math.max(box.clientWidth, 280), m = {t: 10, r: 46, b: 24, l: 46};
     const iw = W - m.l - m.r, ih = H - m.t - m.b, n = data.length;
     const x = i => m.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
-    const y = v => m.t + ih - v / 100 * ih;
-    const s = sv("svg", {viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": series.map(p => p.label).join(", ") + " 겹친 선 그래프 (기간 내 최저 0, 최고 100)"});
-    [0, 25, 50, 75, 100].forEach(v => {
-      s.appendChild(sv("line", {class: "gl", x1: m.l, x2: W - m.r, y1: y(v), y2: y(v)}));
-      const t = sv("text", {x: m.l - 6, y: y(v) + 4, "text-anchor": "end"}); t.textContent = v; s.appendChild(t);
+    // 왼쪽 축: axis "L" 선들, 오른쪽 축: 나머지 선들 (같은 단위끼리 한 축을 공유)
+    function axis(list, zero){
+      const vals = [];
+      list.forEach(p => data.forEach(r => { if (r[p.key] != null) vals.push(r[p.key]); }));
+      let lo = Math.min(...vals), hi = Math.max(...vals);
+      if (zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+      const tk = niceTicks(lo, hi, 4), a = tk[0], b = tk[tk.length - 1];
+      return {tk, f: v => m.t + ih - (v - a) / (b - a) * ih};
+    }
+    const L = axis(series.filter(p => p.axis === "L"), false);
+    const R = axis(series.filter(p => p.axis !== "L"), true);
+    const s = sv("svg", {viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": series.map(p => p.label).join(", ") + " 겹친 선 그래프 (왼쪽 축 원, 오른쪽 축 USD/톤)"});
+    L.tk.forEach(v => {
+      s.appendChild(sv("line", {class: "gl", x1: m.l, x2: W - m.r, y1: L.f(v), y2: L.f(v)}));
+      const t = sv("text", {x: m.l - 6, y: L.f(v) + 4, "text-anchor": "end"}); t.textContent = shortNum(v); s.appendChild(t);
+    });
+    R.tk.forEach(v => {
+      if (v === 0) s.appendChild(sv("line", {class: "zero", x1: m.l, x2: W - m.r, y1: R.f(0), y2: R.f(0)}));
+      const t = sv("text", {x: W - m.r + 6, y: R.f(v) + 4, "text-anchor": "start"}); t.textContent = shortNum(v); s.appendChild(t);
     });
     const scales = series.map(p => {
-      const vals = data.map(r => r[p.key]).filter(v => v != null);
-      const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
-      const norm = v => (v - lo) / span * 100;
+      const norm = p.axis === "L" ? L.f : R.f;  // 값 → 화면 y
       let d = "", pen = false;
-      data.forEach((r, i) => { const v = r[p.key]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(norm(v)).toFixed(1); pen = true; });
+      data.forEach((r, i) => { const v = r[p.key]; if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + norm(v).toFixed(1); pen = true; });
       s.appendChild(sv("path", {class: "ln", d, stroke: css(p.color)}));
       return {p, norm};
     });
@@ -240,7 +252,7 @@ details.tbl td{color:var(--text)}
       scales.forEach((sc, k) => {
         const v = r[sc.p.key];
         if (v == null) dots[k].setAttribute("visibility", "hidden");
-        else { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(sc.norm(v))); dots[k].setAttribute("visibility", "visible"); }
+        else { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", sc.norm(v)); dots[k].setAttribute("visibility", "visible"); }
         const line = el("div"); const sw = el("span", "sw"); sw.style.background = css(sc.p.color);
         line.appendChild(sw); line.appendChild(document.createTextNode(`${sc.p.label} ${sc.p.fmt(v)}`)); tip.appendChild(line);
       });
@@ -257,7 +269,7 @@ details.tbl td{color:var(--text)}
   const P_STOCK = {key: "stock", color: "--s-stock", label: "재고", fmt: v => fmt0(v) + "t"};
   const P_S61 = {key: "s61", color: "--s-spread", label: "6M−1M", zero: true, fmt: v => "$" + fmtS(v)};
   const P_S31 = {key: "s31", color: "--s-spread2", label: "3M−1M", zero: true, fmt: v => "$" + fmtS(v)};
-  const P_PX = {key: "px", color: "--accent", label: "삼아알미늄", fmt: v => v == null ? "–" : Math.round(v).toLocaleString("ko-KR") + "원"};
+  const P_PX = {key: "px", color: "--accent", label: "삼아알미늄", axis: "L", fmt: v => v == null ? "–" : Math.round(v).toLocaleString("ko-KR") + "원"};
 
   // KPI
   function kpis(){
@@ -290,7 +302,7 @@ details.tbl td{color:var(--text)}
     chart(document.getElementById("c3"), data, [P_PRICE, P_STOCK], 150);
     chart(document.getElementById("c4"), data, [P_S61], 200);
     chart(document.getElementById("c5"), data, [P_S31], 200);
-    overlay(document.getElementById("c6"), data, [P_PX, P_S61, P_S31], 360);
+    overlay(document.getElementById("c6"), data, [{...P_PX, label: "삼아알미늄 (왼쪽 축, 원)"}, {...P_S61, label: "6M−1M (오른쪽 축, USD/톤)"}, {...P_S31, label: "3M−1M (오른쪽 축, USD/톤)"}], 360);
   }
   document.querySelectorAll(".ranges button").forEach(b => b.addEventListener("click", () => {
     months = +b.dataset.m;
