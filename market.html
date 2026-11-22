@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>낸드·GPU 가격 | 시장 리서치</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="market.css">
+<script src="market-data.js" defer></script>
+<script src="market.js" defer></script>
+</head>
+<body>
+<div class="app">
+<nav class="side" aria-label="페이지">
+  <div class="brand">시장 리서치</div>
+  <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
+  <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
+  <a href="market.html" aria-current="page">낸드·GPU 가격<small>현물·계약·렌탈</small></a>
+</nav>
+<main class="wrap market">
+  <header class="market-header">
+    <h1>낸드·GPU 가격</h1>
+    <div class="market-jump"><a href="#nand">낸드</a><a href="#gpu">GPU 렌탈</a></div>
+  </header>
+
+  <section id="nand" class="market-section" aria-labelledby="nand-title">
+    <div class="section-head">
+      <h2 id="nand-title">낸드 플래시</h2>
+      <div class="source-links">
+        <a href="https://www.trendforce.com/price/flash/wafer_spot">현물가 원문</a>
+        <a href="https://www.trendforce.com/price/flash/wafer_contract">계약가 원문</a>
+      </div>
+    </div>
+    <aside class="market-card outlook" aria-labelledby="outlook-title">
+      <div class="card-head">
+        <h3 id="outlook-title">TrendForce 계약가 전망</h3>
+        <a href="https://www.trendforce.com/presscenter/news/20261119-13314.html">2026.11.19 발표</a>
+      </div>
+      <dl>
+        <div><dt>4Q26 · 전분기 대비</dt><dd>+8~13%</dd></div>
+        <div><dt>1Q27 · 전분기 대비</dt><dd>−5~0%</dd></div>
+      </dl>
+      <p>중국 클라우드 기업의 기업용 SSD 주문 축소와 공급 증가를 반영한 전망입니다. TrendForce는 유통 재고 조정으로 최근 현물가가 20% 넘게 내렸다고 설명했습니다.</p>
+    </aside>
+    <div class="market-card">
+      <div class="card-head"><h3>현물·계약 가격표</h3><span id="nand-status" class="market-meta" role="status"></span></div>
+      <table class="market-table" aria-label="낸드 현물 및 계약 가격">
+        <thead><tr><th scope="col">품목</th><th scope="col">가격</th><th scope="col">직전 대비</th><th scope="col">기준일</th></tr></thead>
+        <tbody id="nand-table"></tbody>
+      </table>
+      <details class="market-import">
+        <summary>내 낸드 가격 파일 불러오기</summary>
+        <p>엑셀에서 UTF-8 CSV로 저장하세요. 열 순서는 아래와 같고, 이 브라우저에만 저장됩니다.</p>
+        <code>date,kind,item,price,unit</code>
+        <p>날짜는 YYYY-MM-DD, 구분은 현물 spot 또는 계약 contract입니다.</p>
+        <div class="file-controls">
+          <input type="file" id="nand-file" accept=".csv,text/csv" aria-label="낸드 가격 CSV">
+          <button id="nand-reset" type="button" hidden>내 기록 지우기</button>
+        </div>
+        <p id="import-status" aria-live="polite"></p>
+      </details>
+    </div>
+    <div class="market-card">
+      <div class="card-head">
+        <h3>낸드 가격 추이</h3>
+        <select id="nand-series" aria-label="낸드 품목" disabled><option>품목 없음</option></select>
+      </div>
+      <div class="market-chart" id="nand-chart"></div>
+    </div>
+  </section>
+
+  <section id="gpu" class="market-section" aria-labelledby="gpu-title">
+    <div class="section-head">
+      <h2 id="gpu-title">GPU 렌탈가</h2>
+      <div class="source-links"><a href="https://gpurentalprices.com/data">가격 출처</a><a href="https://cloud.vast.ai/">Vast.ai 매물</a></div>
+    </div>
+    <div class="market-card">
+      <div class="card-head"><h3>모델별 렌탈 가격표</h3><span class="market-meta">USD/GPU·시간 · UTC</span></div>
+      <table class="market-table gpu-table" aria-label="GPU 렌탈 가격">
+        <thead><tr>
+          <th scope="col">모델</th><th scope="col">최저가</th><th scope="col">전일 대비</th>
+          <th scope="col">하위 25% 가격</th><th scope="col">샘플 수</th>
+        </tr></thead>
+        <tbody id="gpu-table"></tbody>
+      </table>
+      <p class="market-note" id="gpu-status" role="status"></p>
+      <p class="market-note">당일 확인된 온디맨드 요금 중 공급자별 최저가를 집계합니다. 샘플 수는 공급자 수입니다.</p>
+      <p class="market-note">GPU rental price data by <a href="https://gpurentalprices.com">gpurentalprices.com</a>, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. 모델별로 재집계했습니다.</p>
+    </div>
+    <div class="market-card">
+      <div class="card-head">
+        <h3>GPU 렌탈가 추이</h3>
+        <div class="chart-controls">
+          <select id="gpu-model" aria-label="GPU 모델"></select>
+          <select id="gpu-range" aria-label="가격 차트 기간">
+            <option value="30">30일</option><option value="90">90일</option><option value="0">전체</option>
+          </select>
+        </div>
+      </div>
+      <div class="market-chart" id="gpu-chart"></div>
+    </div>
+  </section>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+.market{max-width:1220px}
+.market-header,.section-head,.card-head,.chart-controls,.source-links,.file-controls{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
+}
+.market-header{margin-bottom:28px;align-items:flex-end}
+.market h1,.market h2,.market h3{margin:0;letter-spacing:-.025em}
+.market h1{font-size:clamp(26px,4vw,34px)}
+.market h2{font-size:22px}
+.market h3{font-size:16px}
+.market-section{margin-bottom:30px;scroll-margin-top:16px}
+.section-head{margin:0 0 12px}
+.market a{color:var(--accent);font-size:14px;text-underline-offset:3px}
+.market-jump{display:flex;gap:5px;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--surface)}
+.market-jump a{display:block;text-decoration:none;padding:6px 10px;border-radius:6px}
+.market-jump a:hover{background:var(--accent-soft)}
+.market-card{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.outlook dl{display:flex;gap:clamp(22px,5vw,68px);margin:14px 0 8px}
+.outlook dt,.market-meta,.market-note,.outlook p,.market-import p{color:var(--muted);font-size:13px;line-height:1.5}
+.outlook dd{font-size:22px;font-weight:700;margin:3px 0 0;font-variant-numeric:tabular-nums}
+.outlook p,.market-note{margin:8px 0 0}
+.market-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px;font-variant-numeric:tabular-nums}
+.market-table th,.market-table td{text-align:right;padding:11px 6px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.market-table thead th{color:var(--muted);font-weight:500;font-size:13px}
+.market-table th:first-child,.market-table td:first-child{width:37%;text-align:left;padding-left:0}
+.market-table tbody th{font-size:15px;font-weight:600}
+.market-table td{font-size:14px}
+.market-table small{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:3px}
+.market-table tr:last-child>*{border-bottom:0}
+.market-table td[colspan]{text-align:left;color:var(--muted);width:auto}
+.market-up{color:var(--up)}
+.market-down{color:var(--down)}
+.market select,.market button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit;font-size:13px;max-width:100%}
+.market button,.market-import summary{cursor:pointer}
+.market-import{border-top:1px solid var(--line);margin-top:8px;padding-top:10px;font-size:13px}
+.market-import input{max-width:100%}
+.market-import code{overflow-wrap:anywhere}
+.file-controls{justify-content:flex-start}
+.market-chart{position:relative;min-height:185px;margin-top:12px}
+.market-chart svg{display:block;width:100%;overflow:hidden}
+.market-chart svg text{font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.market-chart .guide{stroke:var(--line)}
+.chart-key{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:4px 0}
+.chart-key span::before{content:"";display:inline-block;vertical-align:middle;width:10px;height:3px;margin-right:5px;background:var(--series)}
+.chart-empty{display:grid;place-items:center;min-height:170px;color:var(--muted);text-align:center;margin:0;line-height:1.5;font-size:14px}
+.market-chart figcaption{color:var(--muted);font-size:13px;min-height:20px;margin-top:4px}
+.market-chart figure{margin:0}
+@media (max-width:560px){
+  .market{padding-top:22px}
+  .market-card{padding:13px 11px}
+  .market-table th,.market-table td{padding-left:3px;padding-right:3px}
+  .market-table th:first-child{width:32%}
+  .gpu-table th:first-child{width:28%}
+  .market-table td,.market-table thead th{font-size:12px}
+  .market-table tbody th{font-size:13px}
+  .market-table small{font-size:11px}
+}
