@@ -19,6 +19,14 @@
     ["2025-12-31", 12.16], ["2026-03-31", 23.69],
     ["2026-06-30", 25.76], ["2026-09-30", 26.43],
   ]);
+  // Selected months from the DRAM contract-price chart in the same IR, slide 17.
+  const dramReference = [
+    { date: "2025-10-31", label: "25.10", ddr5: 8.7, ddr4: 7 },
+    { date: "2025-12-31", label: "25.12", ddr5: 20.8, ddr4: 9.3 },
+    { date: "2026-03-31", label: "26.03", ddr5: 31, ddr4: 13 },
+    { date: "2026-06-30", label: "26.06", ddr5: 40, ddr4: 21 },
+    { date: "2026-09-30", label: "26.09", ddr5: 48, ddr4: 26 },
+  ];
   const isContract = row => row.kind === "contract";
   const time = date => Date.parse(date + "T00:00:00Z");
   const iso = stamp => new Date(stamp).toISOString().slice(0, 10);
@@ -171,7 +179,11 @@
     const all = state.data.gpu[key] || [];
     const range = Number(el("gpu-range").value);
     const cutoff = all.length && range ? time(all.at(-1).date) - (range - 1) * day : -Infinity;
-    chart(el("gpu-chart"), all.filter(row => time(row.date) >= cutoff), [
+    const points = all.filter(row => time(row.date) >= cutoff && Number.isFinite(row.low));
+    el("gpu-coverage").textContent = points.length
+      ? points[0].date + " ~ " + points.at(-1).date + " · 가격 기록 " + points.length + "일"
+      : "이 기간의 가격 기록이 없습니다.";
+    chart(el("gpu-chart"), points, [
       { key: "low", label: "최저가", color: "var(--s-price)" },
       { key: "p25", label: "하위 25% 가격", color: "var(--s-spread)" },
     ], "USD/GPU·시간", "이 모델의 가격 기록이 없습니다.", { daily: true });
@@ -209,6 +221,13 @@
     { quarters: true, suffix: "%", ticks: [-10, 0, 20, 40, 60, 80] });
   }
 
+  function drawDram() {
+    chart(el("dram-chart"), dramReference, [
+      { key: "ddr5", label: "DDR5 16Gb", color: "var(--s-price)" },
+      { key: "ddr4", label: "DDR4 8Gb", color: "var(--s-spread)" },
+    ], "USD/칩", "공개 계약가 기록이 없습니다.", { quarters: true, ticks: [0, 10, 20, 30, 40, 50] });
+  }
+
   function renderGpu() {
     const body = el("gpu-table");
     body.replaceChildren();
@@ -236,10 +255,14 @@
     drawGpu();
   }
 
-  const correlation = JSON.parse(el("corr-data").textContent);
-  el("corr-period").textContent = correlation.from + " ~ " + correlation.through + " 분석";
+  const referenceCorrelation = JSON.parse(el("corr-data").textContent);
 
   function renderCorrelation() {
+    const correlation = state.data.correlation || referenceCorrelation;
+    el("corr-period").textContent = correlation.from + " ~ " + correlation.through + " 분석";
+    el("corr-stock-source").textContent = correlation.source || "";
+    el("corr-stock-source").hidden = !correlation.source;
+    el("corr-original-source").hidden = Boolean(correlation.source);
     const results = correlation[el("corr-frequency").value][el("corr-metric").value];
     const body = el("corr-body");
     body.replaceChildren();
@@ -252,12 +275,23 @@
           cell.className = coefficient > 0 ? "corr-positive" : "corr-negative";
           cell.style.setProperty("--corr-strength", Math.round(Math.abs(coefficient) * 28) + "%");
         }
-        if (coefficient == null) cell.title = "비교 구간의 렌탈가 변화율이 일정합니다.";
+        if (coefficient == null) cell.title = "변화율이 일정하거나 비교할 수 있는 표본이 부족합니다.";
         cell.append(html("small", count + "쌍"));
         return cell;
       });
       insertRow(body, label.split(" (")[0], "", cells);
     }
+  }
+
+  function mergeGpu(initial, latest) {
+    return Object.fromEntries(gpuModels.map(([key]) => {
+      const rows = new Map((initial[key] || []).map(row => [row.date, row]));
+      for (const row of latest[key] || []) {
+        const previous = rows.get(row.date);
+        if (!previous || Date.parse(row.at) >= Date.parse(previous.at)) rows.set(row.date, row);
+      }
+      return [key, [...rows.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-400)];
+    }));
   }
 
   function mergeNand(rows) {
@@ -363,11 +397,17 @@
   renderGpu();
   renderCorrelation();
   renderNand();
+  drawDram();
   drawOutlook();
   let pending;
   window.addEventListener("resize", () => {
     clearTimeout(pending);
-    pending = setTimeout(() => { drawGpu(); if (state.series.length) drawNand(); drawOutlook(); }, 100);
+    pending = setTimeout(() => {
+      drawGpu();
+      if (state.series.length) drawNand();
+      drawDram();
+      drawOutlook();
+    }, 100);
   });
 
   // Scheduled commits made by GITHUB_TOKEN need not trigger a Pages rebuild.
@@ -380,9 +420,12 @@
       const source = text.trim();
       if (!source.startsWith(sourcePrefix) || !source.endsWith(";")) return;
       const data = JSON.parse(source.slice(sourcePrefix.length, -1));
-      if (data.version !== 1 || data.gpuSource !== "gpurentalprices" || !Array.isArray(data.nand)) return;
-      state.data = data;
+      if (data.version !== 1 || data.gpuSource !== "gpurentalprices" || !data.gpu || !Array.isArray(data.nand)) return;
+      const previous = state.data.correlation || referenceCorrelation;
+      const correlation = data.correlation?.through >= previous.through ? data.correlation : previous;
+      state.data = { ...data, gpu: mergeGpu(state.data.gpu, data.gpu), correlation };
       renderGpu();
+      renderCorrelation();
       renderNand();
     }).catch(() => { /* The published snapshot remains available. */ });
   }

@@ -3,6 +3,7 @@ name: 낸드·GPU 가격 갱신
 on:
   schedule:
     - cron: "20 0,6,12,18 * * *"
+    - cron: "45 12 * * 1" # Monday 21:45 KST, after the previous trading week.
   workflow_dispatch:
 
 permissions:
@@ -26,7 +27,12 @@ jobs:
         env:
           NAND_FEED_URL: ${{ secrets.NAND_FEED_URL }}
           NAND_FEED_TOKEN: ${{ secrets.NAND_FEED_TOKEN }}
-        run: python fetch_market.py
+          EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
+          UPDATE_CORRELATION: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '45 12 * * 1' }}
+        run: |
+          args=()
+          if [ "$UPDATE_CORRELATION" = "true" ]; then args+=(--weekly-correlation); fi
+          python fetch_market.py "${args[@]}"
       - name: 수집한 가격 반영
         run: |
           git config user.name "market-sync"

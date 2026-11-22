@@ -43,6 +43,7 @@
 .corr-table .corr-negative{background:color-mix(in srgb,var(--down) var(--corr-strength),transparent)}
 .outlook-trends{margin:14px 0 20px}
 .outlook-trends .market-card{padding:16px}
+.dram-reference{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 #outlook{scroll-margin-top:16px}
 #nand-records{margin-top:20px}
 .market-up{color:var(--up)}
