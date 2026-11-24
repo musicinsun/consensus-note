@@ -30,5 +30,5 @@ AI(Codex, Claude 등)로 수정할 때는 먼저 [AGENTS.md](AGENTS.md)를 읽�
 
 - 공개 웹사이트 표시와 저장이 허용된 [Barchart OnDemand](https://www.barchart.com/ondemand/api) 키를 GitHub **Settings → Secrets and variables → Actions**에서 `BARCHART_API_KEY`로 등록합니다. 키에는 지수 시세, 5분봉과 거래소 집계 심볼에 대한 접근이 필요합니다.
 - 처음에는 **Actions → 미국장 마감 갱신 → Run workflow**에서 확인합니다. 휴장일에는 이전 거래일 기록을 계속 표시합니다. 실행이 지연되거나 수집에 실패하면 마지막 저장 기록과 해당 날짜가 표시됩니다.
-- 히트맵과 TradingView 최신 차트는 각 서비스의 위젯으로 표시합니다. 날짜별 저장 항목은 지수 종가와 등락률, 5분 추이, 거래소 집계입니다.
+- 히트맵은 Finviz 최신 위젯으로 표시하고 TradingView 히트맵으로 전환할 수 있습니다. 저장된 5분봉이 없는 날짜에는 TradingView의 관련 ETF 최신 차트와 실제 지수 링크를 표시합니다. 날짜별 저장 항목은 지수 종가와 등락률, 5분 추이, 거래소 집계입니다.
 - GitHub Actions의 데이터 커밋이 배포를 기다리지 않도록 미국장 페이지는 공개 저장소의 `main`에서 최신 기록을 읽습니다. Pages에 배포된 기록을 예비로 사용합니다.

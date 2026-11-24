@@ -1,8 +1,8 @@
 const indices = {
-  SPX: ['S&P 500', 'SP:SPX', 'var(--s-price)'],
-  IXIC: ['나스닥 종합', 'NASDAQ:IXIC', 'var(--s-spread)'],
-  SOX: ['필라델피아 반도체', 'NASDAQ:SOX', 'var(--s-spread2)'],
-  RUT: ['Russell 2000', 'TVC:RUT', 'var(--accent)'],
+  SPX: ['S&P 500', 'SP:SPX', 'var(--s-price)', 'AMEX:SPY'],
+  IXIC: ['나스닥 종합', 'NASDAQ:IXIC', 'var(--s-spread)', 'NASDAQ:ONEQ'],
+  SOX: ['필라델피아 반도체', 'NASDAQ:SOX', 'var(--s-spread2)', 'NASDAQ:SOXQ'],
+  RUT: ['Russell 2000', 'TVC:RUT', 'var(--accent)', 'AMEX:IWM'],
 };
 const breadthMetrics = [
   ['up', '상승', 'positive'], ['down', '하락', 'negative'], ['flat', '보합', ''],
@@ -18,6 +18,10 @@ const chartNote = document.getElementById('chart-note');
 const chartLink = document.getElementById('chart-link');
 const chartSwitch = document.getElementById('chart-switch');
 const legend = document.getElementById('chart-legend');
+const heatmapSwitch = document.getElementById('heatmap-switch');
+const heatmapNote = document.getElementById('heatmap-note');
+const finvizMap = document.getElementById('finviz-map');
+const tradingViewMap = document.getElementById('tradingview-map');
 const svgNamespace = 'http://www.w3.org/2000/svg';
 let archive = {};
 let liveSymbol = 'SPX';
@@ -95,8 +99,9 @@ function renderArchiveChart(day) {
 function renderLiveChart() {
   chartSwitch.hidden = false;
   legend.hidden = true;
-  chartNote.textContent = 'TradingView 최신 화면 · 5분 간격 · 미국 동부시간';
-  const [, symbol] = indices[liveSymbol];
+  const [, symbol, , etf] = indices[liveSymbol];
+  const ticker = etf.split(':')[1];
+  chartNote.textContent = `${session.value ? `${session.value} 저장 차트 없음 · ` : ''}${ticker} ETF 참고 차트 · 최신 5분 · 미국 동부시간`;
   const source = new URL('https://www.tradingview.com/chart/');
   source.search = new URLSearchParams({symbol, interval: '5'});
   chartLink.href = source.href;
@@ -109,7 +114,7 @@ function renderLiveChart() {
   viewport.style.height = 'calc(100% - 24px)';
   const attribution = element('div', '', 'tradingview-widget-copyright');
   const link = element('a', 'TradingView', 'blue-text');
-  link.href = source.href;
+  link.href = `https://www.tradingview.com/symbols/${etf.replace(':', '-')}/`;
   link.target = '_blank';
   link.rel = 'noopener nofollow';
   attribution.append(link);
@@ -117,7 +122,7 @@ function renderLiveChart() {
   script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
   script.async = true;
   script.textContent = JSON.stringify({
-    symbol, autosize: true, interval: '5', range: '1D', timezone: 'America/New_York', style: '2',
+    symbol: etf, autosize: true, interval: '5', range: '1D', timezone: 'America/New_York', style: '2',
     theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', locale: 'kr',
     hide_top_toolbar: true, hide_side_toolbar: true, hide_volume: true, allow_symbol_change: false,
   });
@@ -153,10 +158,7 @@ function renderSession() {
   breadthNote.textContent = day.breadth ? `${session.value} 미국장 마감 · Barchart 집계` : '저장된 집계가 없습니다. 최신 수치는 Barchart에서 확인할 수 있습니다.';
   status.textContent = day.seed ? '2026-11-23 마감 기록을 먼저 넣었습니다. 이후 마감 기록 저장에는 Barchart API 키가 필요합니다.' : '';
   status.hidden = !status.textContent;
-  if (!renderArchiveChart(day)) {
-    renderLiveChart();
-    if (session.value) chartNote.textContent = `${session.value} 저장 차트 없음 · TradingView 최신 5분 차트`;
-  }
+  if (!renderArchiveChart(day)) renderLiveChart();
 }
 
 async function readArchive(url) {
@@ -187,7 +189,24 @@ chartSwitch.addEventListener('click', event => {
   if (!symbol || symbol === liveSymbol) return;
   liveSymbol = symbol;
   renderLiveChart();
-  if (session.value) chartNote.textContent = `${session.value} 저장 차트 없음 · TradingView 최신 5분 차트`;
+});
+heatmapSwitch.addEventListener('click', () => {
+  const showTradingView = tradingViewMap.hidden;
+  if (showTradingView && !tradingViewMap.hasChildNodes()) {
+    const heatmap = element('tv-heatmap');
+    for (const [key, value] of Object.entries({'heatmap-type': 'stock', 'data-source': 'SPX500', grouping: 'sector', 'block-size': 'market_cap_basic', 'block-color': 'change'})) {
+      heatmap.setAttribute(key, value);
+    }
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'https://widgets.tradingview-widget.com/w/en/tv-heatmap.js';
+    tradingViewMap.append(heatmap, script);
+  }
+  finvizMap.hidden = showTradingView;
+  tradingViewMap.hidden = !showTradingView;
+  heatmapSwitch.setAttribute('aria-pressed', String(showTradingView));
+  heatmapSwitch.textContent = showTradingView ? 'Finviz 히트맵' : 'TradingView 히트맵';
+  heatmapNote.textContent = `시가총액으로 크기 표시 · 1일 등락률 · ${showTradingView ? 'TradingView' : 'Finviz'} 최신 화면`;
 });
 new ResizeObserver(() => {
   if (archive[session.value]?.bars) renderArchiveChart(archive[session.value]);

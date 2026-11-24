@@ -27,10 +27,11 @@
 
   <section class="panel" aria-labelledby="heatmap-heading">
     <div class="panel-heading">
-      <div><h2 id="heatmap-heading">S&amp;P 500 히트맵</h2><p>시가총액으로 크기 표시 · 1일 등락률 · Finviz 최신 화면</p></div>
-      <a href="https://finviz.com/map?t=sec&amp;st=d1" target="_blank" rel="noopener">Finviz에서 보기 ↗</a>
+      <div><h2 id="heatmap-heading">S&amp;P 500 히트맵</h2><p id="heatmap-note">시가총액으로 크기 표시 · 1일 등락률 · Finviz 최신 화면</p></div>
+      <div class="market-links"><button id="heatmap-switch" type="button" aria-pressed="false">TradingView 히트맵</button><a href="https://finviz.com/map?t=sec&amp;st=d1" target="_blank" rel="noopener">Finviz에서 보기 ↗</a></div>
     </div>
-    <iframe class="heatmap" src="https://finviz.com/widgets/map?t=sec&amp;st=d1&amp;wid=6afdp6a8" title="Finviz S&amp;P 500 히트맵" loading="lazy"></iframe>
+    <iframe id="finviz-map" class="heatmap" src="https://finviz.com/widgets/map?t=sec&amp;st=d1&amp;wid=6afdp6a8" title="Finviz S&amp;P 500 히트맵" loading="lazy"></iframe>
+    <div id="tradingview-map" class="heatmap" hidden></div>
   </section>
 
   <section class="panel" aria-labelledby="chart-heading">
