@@ -1,8 +1,8 @@
 const indices = {
-  SPX: ['S&P 500', 'SP:SPX', 'var(--s-price)', 'AMEX:SPY'],
-  IXIC: ['나스닥 종합', 'NASDAQ:IXIC', 'var(--s-spread)', 'NASDAQ:ONEQ'],
-  SOX: ['필라델피아 반도체', 'NASDAQ:SOX', 'var(--s-spread2)', 'NASDAQ:SOXQ'],
-  RUT: ['Russell 2000', 'TVC:RUT', 'var(--accent)', 'AMEX:IWM'],
+  SPX: 'S&P 500',
+  IXIC: '나스닥 종합',
+  SOX: '필라델피아 반도체',
+  RUT: 'Russell 2000',
 };
 const breadthMetrics = [
   ['up', '상승', 'positive'], ['down', '하락', 'negative'], ['flat', '보합', ''],
@@ -14,17 +14,14 @@ const indexCards = document.getElementById('index-cards');
 const breadth = document.getElementById('breadth');
 const breadthNote = document.getElementById('breadth-note');
 const chart = document.getElementById('chart');
-const chartNote = document.getElementById('chart-note');
-const chartLink = document.getElementById('chart-link');
-const chartSwitch = document.getElementById('chart-switch');
-const legend = document.getElementById('chart-legend');
+const marketFlow = document.getElementById('market-flow');
+const chartDetails = document.getElementById('chart-details');
 const heatmapSwitch = document.getElementById('heatmap-switch');
 const heatmapNote = document.getElementById('heatmap-note');
 const finvizMap = document.getElementById('finviz-map');
 const tradingViewMap = document.getElementById('tradingview-map');
 const svgNamespace = 'http://www.w3.org/2000/svg';
 let archive = {};
-let liveSymbol = 'SPX';
 
 const integer = new Intl.NumberFormat('ko-KR');
 const decimal = new Intl.NumberFormat('ko-KR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -46,95 +43,56 @@ function svgNode(tag, attributes, text = '') {
   return node;
 }
 
-function renderArchiveChart(day) {
-  const series = Object.keys(indices).filter(symbol => day.bars?.[symbol]?.length > 1);
-  if (!series.length) return false;
+function flowText(day) {
+  const close = day.indices?.SPX?.change;
+  if (!Number.isFinite(close)) return '저장된 마감 기록이 없습니다.';
+  const {open, low, high} = day.flow || {};
+  if (![open, low, high].every(Number.isFinite)) {
+    return `S&P 500은 ${signedPercent(close)}로 마감했습니다. 개장과 장중 범위는 원본 차트에서 확인할 수 있습니다.`;
+  }
+  return `${signedPercent(open)}로 출발해 장중 ${signedPercent(low)}~${signedPercent(high)} 사이를 움직인 뒤 ${signedPercent(close)}로 마감했습니다.`;
+}
 
-  const width = Math.max(280, chart.clientWidth);
+function renderArchiveChart(day) {
+  const points = day.bars?.SPX;
+  if (!points?.length || !chart.clientWidth || !chart.clientHeight) return;
+
+  const width = chart.clientWidth;
   const height = chart.clientHeight;
   const plot = {left: 54, top: 16, right: width - 22, bottom: height - 30};
-  const allPoints = series.flatMap(symbol => day.bars[symbol]);
   const lastMinute = day.closeMinute || 960;
-  const values = allPoints.map(([, value]) => value);
-  const low = Math.min(0, ...values);
-  const high = Math.max(0, ...values);
+  const values = points.map(([, value]) => value);
+  const low = Math.min(...values);
+  const high = Math.max(...values);
   const step = Math.max(0.25, 10 ** Math.floor(Math.log10(Math.max(high - low, 0.25) / 4)));
   const tick = Math.ceil(Math.max(high - low, step) / (step * 5)) * step;
   const min = Math.floor(low / tick) * tick;
   const max = Math.max(min + tick, Math.ceil(high / tick) * tick);
   const x = minute => plot.left + (minute - 570) / (lastMinute - 570) * (plot.right - plot.left);
   const y = value => plot.bottom - (value - min) / (max - min) * (plot.bottom - plot.top);
-  const svg = svgNode('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': `${session.value} 미국 지수 5분 추이, 전 거래일 종가 대비 등락률`});
+  const svg = svgNode('svg', {viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': `${session.value} S&P 500 장중 흐름, 전 거래일 종가 대비 등락률`});
 
   for (let value = min; value <= max + tick / 100; value += tick) {
     const isZero = Math.abs(value) < tick / 100;
     svg.append(svgNode('line', {x1: plot.left, x2: plot.right, y1: y(value), y2: y(value), class: isZero ? 'chart-zero' : 'chart-gridline'}));
     svg.append(svgNode('text', {x: plot.left - 7, y: y(value) + 4, 'text-anchor': 'end'}, `${isZero ? 0 : Number(value.toFixed(2))}%`));
   }
-  const middleMinute = lastMinute < 960 ? 660 : 750;
-  for (const minute of [570, middleMinute, lastMinute]) {
+  for (const minute of [570, lastMinute < 960 ? 675 : 750, lastMinute]) {
     const hour = Math.floor(minute / 60);
     const label = `${String(hour).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
     svg.append(svgNode('text', {x: x(minute), y: plot.bottom + 21, 'text-anchor': 'middle'}, label));
   }
 
-  legend.replaceChildren();
-  for (const symbol of series) {
-    const color = indices[symbol][2];
-    const path = day.bars[symbol].map(([minute, value], index) => `${index ? 'L' : 'M'}${x(minute).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
-    svg.append(svgNode('path', {d: path, fill: 'none', stroke: color, 'stroke-width': 2.3}));
-    const key = element('span');
-    const line = element('i');
-    line.style.setProperty('--series-color', color);
-    key.append(line, indices[symbol][0]);
-    legend.append(key);
-  }
+  const path = points.map(([minute, value], index) => `${index ? 'L' : 'M'}${x(minute).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
+  svg.append(svgNode('path', {d: path, fill: 'none', stroke: 'var(--s-price)', 'stroke-width': 2.3}));
   chart.replaceChildren(svg);
-  chartNote.textContent = '전 거래일 종가 대비 · 5분 간격 · 미국 동부시간';
-  chartSwitch.hidden = true;
-  legend.hidden = false;
-  return true;
-}
-
-function renderLiveChart() {
-  chartSwitch.hidden = false;
-  legend.hidden = true;
-  const [, symbol, , etf] = indices[liveSymbol];
-  const ticker = etf.split(':')[1];
-  chartNote.textContent = `${session.value ? `${session.value} 저장 차트 없음 · ` : ''}${ticker} ETF 참고 차트 · 최신 5분 · 미국 동부시간`;
-  const source = new URL('https://www.tradingview.com/chart/');
-  source.search = new URLSearchParams({symbol, interval: '5'});
-  chartLink.href = source.href;
-  for (const button of chartSwitch.querySelectorAll('button')) {
-    button.setAttribute('aria-pressed', String(button.dataset.symbol === liveSymbol));
-  }
-  const widget = element('div', '', 'tradingview-widget-container');
-  widget.style.height = '100%';
-  const viewport = element('div', '', 'tradingview-widget-container__widget');
-  viewport.style.height = 'calc(100% - 24px)';
-  const attribution = element('div', '', 'tradingview-widget-copyright');
-  const link = element('a', 'TradingView', 'blue-text');
-  link.href = `https://www.tradingview.com/symbols/${etf.replace(':', '-')}/`;
-  link.target = '_blank';
-  link.rel = 'noopener nofollow';
-  attribution.append(link);
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-  script.async = true;
-  script.textContent = JSON.stringify({
-    symbol: etf, autosize: true, interval: '5', range: '1D', timezone: 'America/New_York', style: '2',
-    theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', locale: 'kr',
-    hide_top_toolbar: true, hide_side_toolbar: true, hide_volume: true, allow_symbol_change: false,
-  });
-  chart.replaceChildren(widget);
-  widget.append(viewport, attribution, script);
 }
 
 function renderSession() {
   const day = archive[session.value] || {};
   indexCards.replaceChildren();
   breadth.replaceChildren();
-  for (const [symbol, [label]] of Object.entries(indices)) {
+  for (const [symbol, label] of Object.entries(indices)) {
     const quote = day.indices?.[symbol] || {};
     const card = element('div', '', 'index-card');
     card.append(element('span', label), element('strong', finiteText(quote.close, decimal.format)), element('b', finiteText(quote.change, signedPercent), signedClass(quote.change)));
@@ -158,7 +116,10 @@ function renderSession() {
   breadthNote.textContent = day.breadth ? `${session.value} 미국장 마감 · Barchart 집계` : '저장된 집계가 없습니다. 최신 수치는 Barchart에서 확인할 수 있습니다.';
   status.textContent = day.seed ? '2026-11-23 마감 기록을 먼저 넣었습니다. 이후 마감 기록 저장에는 Barchart API 키가 필요합니다.' : '';
   status.hidden = !status.textContent;
-  if (!renderArchiveChart(day)) renderLiveChart();
+  marketFlow.textContent = flowText(day);
+  chartDetails.hidden = !(day.bars?.SPX?.length > 1);
+  chart.replaceChildren();
+  if (chartDetails.open && !chartDetails.hidden) renderArchiveChart(day);
 }
 
 async function readArchive(url) {
@@ -184,12 +145,6 @@ async function loadArchive() {
 }
 
 session.addEventListener('change', renderSession);
-chartSwitch.addEventListener('click', event => {
-  const symbol = event.target.closest('button')?.dataset.symbol;
-  if (!symbol || symbol === liveSymbol) return;
-  liveSymbol = symbol;
-  renderLiveChart();
-});
 heatmapSwitch.addEventListener('click', () => {
   const showTradingView = tradingViewMap.hidden;
   if (showTradingView && !tradingViewMap.hasChildNodes()) {
@@ -209,6 +164,6 @@ heatmapSwitch.addEventListener('click', () => {
   heatmapNote.textContent = `시가총액으로 크기 표시 · 1일 등락률 · ${showTradingView ? 'TradingView' : 'Finviz'} 최신 화면`;
 });
 new ResizeObserver(() => {
-  if (archive[session.value]?.bars) renderArchiveChart(archive[session.value]);
+  if (chartDetails.open && !chartDetails.hidden) renderArchiveChart(archive[session.value]);
 }).observe(chart);
 loadArchive();

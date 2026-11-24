@@ -115,7 +115,7 @@ def current_snapshot(key, sessions, now):
     if closing_hour not in {13, 16}:
         raise ValueError("S&P 500 정규장 마감 시세를 확인할 수 없습니다.")
 
-    indices, bars = {}, {}
+    indices = {}
     for name, symbol in INDICES.items():
         quote = close_quote(symbol)
         close = number(quote.get("lastPrice"))
@@ -123,12 +123,27 @@ def current_snapshot(key, sessions, now):
         if close <= 0 or previous <= 0:
             raise ValueError(f"{symbol} 지수 값이 잘못되었습니다.")
         indices[name] = {"close": close, "change": round((close / previous - 1) * 100, 2)}
+
+    spx = close_quote("$SPX")
+    previous = number(spx["lastPrice"]) - number(spx["netChange"])
+    prices = {metric: number(spx.get(metric)) for metric in ("open", "low", "high")}
+    if not 0 < prices["low"] <= prices["open"] <= prices["high"]:
+        raise ValueError("S&P 500 개장가 또는 장중 범위가 잘못되었습니다.")
+    flow = {metric: round((price / previous - 1) * 100, 2) for metric, price in prices.items()}
+    snapshot = {"indices": indices, "breadth": breadth, "flow": flow, "closeMinute": close_minute}
+
+    try:
         rows = request_rows(
-            "getHistory", key, symbol=symbol, type="minutes", interval=5, order="asc",
+            "getHistory", key, symbol="$SPX", type="minutes", interval=5, order="asc",
             startDate=observed.strftime("%Y%m%d"), endDate=(observed + timedelta(days=1)).strftime("%Y%m%d"),
         )
-        bars[name] = parse_bars(rows, trade_date, previous, close_minute)
-    return trade_date, {"indices": indices, "breadth": breadth, "closeMinute": close_minute, "bars": bars}
+        points = dict(parse_bars(rows, trade_date, previous, close_minute))
+        points[570] = flow["open"]
+        points[close_minute] = indices["SPX"]["change"]
+        snapshot["bars"] = {"SPX": sorted(points.items())}
+    except (KeyError, RuntimeError, ValueError) as exc:
+        print(f"::warning::S&P 500 장중 그래프 없이 마감 요약을 저장합니다. ({exc})")
+    return trade_date, snapshot
 
 
 def update(key):
