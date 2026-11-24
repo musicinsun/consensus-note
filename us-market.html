@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>미국장 마감 · 시장 리서치</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="us-market.css">
+<script src="us-market-page.js" defer></script>
+</head>
+<body>
+<div class="app">
+<nav class="side" aria-label="페이지">
+  <div class="brand">시장 리서치</div>
+  <a href="index.html">컨센서스 노트<small>증권사 리포트 기록</small></a>
+  <a href="aluminum.html">LME 알루미늄 팔로우<small>삼아알미늄 판가</small></a>
+  <a href="us-market.html" aria-current="page">미국장 마감<small>히트맵 · 지수 · 등락 종목</small></a>
+</nav>
+<main class="wrap">
+  <header class="market-header">
+    <div><h1>미국장 마감</h1><p>한국시간 오전 9시 갱신 예정 · 마감일은 미국 동부시간 기준</p></div>
+    <label for="session">마감 기록 <select id="session" disabled><option>불러오는 중</option></select></label>
+  </header>
+  <p id="status" role="status" class="market-note" hidden></p>
+  <div id="index-cards" class="index-grid" aria-label="지수 종가 및 등락률"></div>
+
+  <section class="panel" aria-labelledby="chart-heading">
+    <div class="panel-heading">
+      <div><h2 id="chart-heading">간밤 미국장 흐름</h2><p>S&amp;P 500 · 전 거래일 종가 대비</p></div>
+      <a href="https://www.tradingview.com/symbols/SPX/" target="_blank" rel="noopener">S&amp;P 500 원본 차트 ↗</a>
+    </div>
+    <p id="market-flow" class="market-flow">마감 기록을 불러오는 중입니다.</p>
+    <details id="chart-details" class="chart-details" hidden>
+      <summary>S&amp;P 500 장중 그래프 · 미국 동부시간</summary>
+      <div id="chart" class="market-chart"></div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="heatmap-heading">
+    <div class="panel-heading">
+      <div><h2 id="heatmap-heading">S&amp;P 500 히트맵</h2><p id="heatmap-note">시가총액으로 크기 표시 · 1일 등락률 · Finviz 최신 화면</p></div>
+      <div class="market-links"><button id="heatmap-switch" type="button" aria-pressed="false">TradingView 히트맵</button><a href="https://finviz.com/map?t=sec&amp;st=d1" target="_blank" rel="noopener">Finviz에서 보기 ↗</a></div>
+    </div>
+    <iframe id="finviz-map" class="heatmap" src="https://finviz.com/widgets/map?t=sec&amp;st=d1&amp;wid=6afdp6a8" title="Finviz S&amp;P 500 히트맵" loading="lazy"></iframe>
+    <div id="tradingview-map" class="heatmap" hidden></div>
+  </section>
+
+  <section class="panel" aria-labelledby="breadth-heading">
+    <div class="panel-heading">
+      <div><h2 id="breadth-heading">상승·하락 종목 수</h2><p id="breadth-note">NYSE · NASDAQ · Barchart 집계</p></div>
+      <a href="https://www.barchart.com/stocks/momentum" target="_blank" rel="noopener">Barchart에서 보기 ↗</a>
+    </div>
+    <div id="breadth" class="breadth-grid"></div>
+  </section>
+  <noscript><p>마감 기록과 장중 차트를 보려면 JavaScript를 켜 주세요.</p></noscript>
+</main>
+</div>
+</body>
+</html>
